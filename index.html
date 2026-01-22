@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: Clear 3D Snow</title>
+    <title>Suna-Sapo: Winter Edition</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -127,11 +127,10 @@
 
     map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
 
-    // --- 【視認性向上版】ハイブリッド雪アニメーション ---
+    // --- 雪アニメーション設定 ---
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
-
     function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     window.addEventListener('resize', resize); resize();
 
@@ -139,63 +138,48 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const pitch = map.getPitch(); 
         const is3D = pitch > 25;
-
         if (particles.length < 160) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                r: Math.random() * 2.5 + 0.5, // 少し小さめに設定
-                o: Math.random() * 0.4 + 0.2, // 透明度を抑えめに
-                vx: (Math.random() - 0.5) * 0.8,
-                vy: Math.random() * 1.2 + 0.8
-            });
+            particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 0.5, o: Math.random() * 0.4 + 0.2, vx: (Math.random() - 0.5) * 0.8, vy: Math.random() * 1.2 + 0.8 });
         }
-
         for (let i = 0; i < particles.length; i++) {
             let p = particles[i];
-            
-            // 手前に来るほど透明にするフェード計算（画面の下20%で消えていく）
             let fadeOut = 1;
-            if (p.y > canvas.height * 0.8) {
-                fadeOut = 1 - (p.y - canvas.height * 0.8) / (canvas.height * 0.2);
-            }
-
+            if (p.y > canvas.height * 0.8) fadeOut = 1 - (p.y - canvas.height * 0.8) / (canvas.height * 0.2);
             ctx.beginPath();
             ctx.fillStyle = `rgba(255, 255, 255, ${p.o * fadeOut})`;
-
             if (!is3D) {
-                // 2Dモード
                 const scale = 1 - (p.y / canvas.height) * 0.5;
                 ctx.arc(p.x, p.y, p.r * scale, 0, Math.PI * 2);
                 p.y += p.vy;
             } else {
-                // 3Dモード
                 const perspective = (p.y / canvas.height);
                 const speed = p.vy * (1 + perspective * 1.2);
                 const xShift = (p.x - canvas.width / 2) * (perspective * 0.06);
-                
-                // 手前に来てもサイズが4pxを超えないように制限
                 let displayRadius = Math.min(p.r * (1 + perspective * 1.5), 4);
                 ctx.arc(p.x + xShift, p.y, displayRadius, 0, Math.PI * 2);
-                
-                p.y += speed;
-                p.x += p.vx + xShift * 0.01;
+                p.y += speed; p.x += p.vx + xShift * 0.01;
             }
-
             if (p.y > canvas.height || p.x < -50 || p.x > canvas.width + 50 || fadeOut <= 0) {
-                p.y = -20;
-                p.x = Math.random() * canvas.width;
+                p.y = -20; p.x = Math.random() * canvas.width;
             }
             ctx.fill();
         }
         requestAnimationFrame(updateSnow);
     }
 
+    // --- マップデザイン・冬モードの適用 ---
     function applyGlowingEffect() {
         if (!map.isStyleLoaded()) return;
         const hour = new Date().getHours();
         let preset = (hour >= 6 && hour < 17) ? 'day' : (hour >= 17 && hour < 19) ? 'dusk' : (hour >= 4 && hour < 6) ? 'dawn' : 'night';
+        
+        // 昼夜プリセットの適用
         map.setConfigProperty('basemap', 'lightPreset', preset);
+        
+        // 冬モード（積雪）の適用: 公園を白くし、街全体を冬景色にする
+        map.setConfigProperty('basemap', 'snowIntensity', 1.0); 
+        
+        // 不要なPOIアイコンの非表示
         map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
     }
 
