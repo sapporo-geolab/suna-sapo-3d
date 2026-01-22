@@ -26,10 +26,7 @@
         .log-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png'); background-size: 40px; }
         .shelter-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png'); background-size: 32px; background-color: white; transition: background-color 0.3s; }
         .active-shelter { background-color: #4cd964 !important; }
-        
-        /* 以前の現在地ボタン（もし残っていれば）を完全に削除 */
         .mapboxgl-ctrl-geolocate { display: none !important; }
-
         #log-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
         .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 70vh; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; }
         .modal-header { padding: 18px; background: #f8f9fa; font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; }
@@ -52,6 +49,7 @@
         <img id="loader-logo-img" src="https://raw.githubusercontent.com/sapporo-geolab/logo-sunahako-img/main/logo_sunasapo.png" alt="" onload="this.style.opacity='1'">
     </div>
     <div class="dot-pulse"><div></div><div></div><div></div></div>
+    <div id="status-text" style="margin-top:20px; color:#666; font-family:sans-serif; font-size:12px;">マップを準備中...</div>
 </div>
 
 <div id="map"></div>
@@ -86,6 +84,7 @@
     let shelterMarkers = [];
     let sheltersVisible = false;
     let isTracking = false; 
+    let firstJumpDone = false; // 初回のジャンプが完了したか
 
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
     const map = new mapboxgl.Map({ 
@@ -95,25 +94,23 @@
         zoom: 17, pitch: 65, bearing: -10, attributionControl: false 
     });
 
-    // --- 【修正】現在地マーカーを手動で作成 ---
+    // 現在地マーカー
     const userMarkerEl = document.createElement('div');
     userMarkerEl.style.width = '20px'; userMarkerEl.style.height = '20px';
     userMarkerEl.style.background = '#007cff'; userMarkerEl.style.border = '3px solid white';
     userMarkerEl.style.borderRadius = '50%'; userMarkerEl.style.boxShadow = '0 0 15px rgba(0,124,255,0.8)';
     const userMarker = new mapboxgl.Marker(userMarkerEl).setLngLat([0, 0]).addTo(map);
 
-    // --- 【修正】方位同期ロジック ---
     function handleOrientation(event) {
         if (!isTracking) return;
         let heading = event.webkitCompassHeading || (360 - event.alpha);
         if (heading) {
-            map.setBearing(heading); // 地図全体を回転（向きを上にする）
+            map.setBearing(heading); 
         }
     }
 
-    // --- 【修正】GPSジャンプロジック ---
     function jumpToCurrentLocation() {
-        // iPhone用の許可リクエスト
+        firstJumpDone = false; // ボタンを押したら再度ジャンプを許可
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             DeviceOrientationEvent.requestPermission().then(res => {
                 if (res === 'granted') initGPS();
@@ -130,22 +127,31 @@
         navigator.geolocation.watchPosition((pos) => {
             const lng = pos.coords.longitude;
             const lat = pos.coords.latitude;
-            userMarker.setLngLat([lng, lat]); // 青い点を移動
+            const accuracy = pos.coords.accuracy; // 精度（メートル）
+
+            userMarker.setLngLat([lng, lat]);
             
-            if (isTracking) {
+            // 精度が一定（100m以内）かつ初回のジャンプがまだの場合のみカメラを移動
+            if (isTracking && !firstJumpDone && accuracy < 100) {
                 map.flyTo({
                     center: [lng, lat],
                     zoom: 18.5,
-                    pitch: 70, // 斜め視点
-                    speed: 1.5,
-                    curve: 1
+                    pitch: 70,
+                    speed: 1.2
                 });
+                firstJumpDone = true; // 一度ジャンプしたら自動追従はしない（操作を優先）
             }
-        }, (err) => alert("位置情報を取得できませんでした"), { enableHighAccuracy: true });
+        }, (err) => {}, { enableHighAccuracy: true });
     }
 
-    // 手動操作されたら自動追跡（向き・中心）を停止
-    map.on('dragstart', () => { isTracking = false; });
+    // ユーザーが地図を触ったら追従をストップ（ズームや回転を自由にできるようにする）
+    map.on('movestart', (e) => {
+        if (e.originalEvent) { // ユーザー操作による移動の場合
+            isTracking = false; 
+            firstJumpDone = true;
+            window.removeEventListener('deviceorientation', handleOrientation);
+        }
+    });
 
     function openLog() { document.getElementById('log-modal').style.display = 'flex'; }
     function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
@@ -159,10 +165,11 @@
     }
 
     function hideLoader() {
+        document.getElementById('status-text').textContent = "準備完了！";
         setTimeout(() => {
             document.getElementById('loader').style.opacity = '0';
             setTimeout(() => { document.getElementById('loader').style.visibility = 'hidden'; }, 1200);
-        }, 4000);
+        }, 2000);
     }
 
     const canvas = document.getElementById('snow-canvas');
@@ -194,6 +201,7 @@
     }
 
     map.on('load', () => {
+        document.getElementById('status-text').textContent = "砂箱データを読み込み中...";
         const csvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ca0f9f45e8a5e2064678f14eb8e7e933/raw/33abeeab3374bc93c97d208c90056b7355c04802/h301.csv';
         Papa.parse(csvUrl, {
             download: true, header: true, skipEmptyLines: true,
