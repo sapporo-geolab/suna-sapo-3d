@@ -271,9 +271,9 @@
             <div style="border-bottom:1px solid #eee; padding:12px 0; display:flex; justify-content:space-between; align-items:center;">
                 <div onclick="closeLog(); map.flyTo({center:[${rawData[log.id]['経度（度）']}, ${rawData[log.id]['緯度（度）']}], zoom:18.5})" style="cursor:pointer;">
                     <div style="color:#ff3b30; font-size:11px;">確認：${log.time}</div>
-                    <div style="font-weight:bold; font-size:13px;">${log.address}</div>
+                    <div style="font-weight:bold; font-size:13px;">${log.address.replace('北海道札幌市', '')}</div>
                 </div>
-                <button onclick="markAsDone(${log.id})" style="background:#4cd964; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">補充されました</button>
+                <button onclick="markAsDone(${log.id})" style="background:#4cd964; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">補充されました！</button>
             </div>`).join('');
     }
 
@@ -284,7 +284,7 @@
         const p = e.features[0].properties;
         if (p.id !== undefined) {
             const isGray = rawData[p.id].isGray;
-            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`<div style="font-family: sans-serif; width: 220px; color: #333;"><img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;"><p style="margin: 10px 0 5px; font-size:14px;"><strong>${rawData[p.id]['住所']}</strong></p>${isGray ? `<div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div><button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button><button class="pop-btn done-btn-green" onclick="markAsDone(${p.id})">補充されました</button>` : `<button class="pop-btn pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>`}</div>`).addTo(map);
+            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`<div style="font-family: sans-serif; width: 220px; color: #333;"><img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;"><p style="margin: 10px 0 5px; font-size:14px;"><strong>${rawData[p.id]['住所']}</strong></p>${isGray ? `<div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div><button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button><button class="pop-btn done-btn-green" onclick="markAsDone(${p.id})">補充されました！</button>` : `<button class="pop-btn pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>`}</div>`).addTo(map);
         }
     });
     map.on('mouseenter', 'sunabako-click-area', () => { map.getCanvas().style.cursor = 'pointer'; });
