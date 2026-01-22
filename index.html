@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: High Visibility Edition</title>
+    <title>Suna-Sapo: Clear 3D Snow</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -168,20 +168,34 @@
         requestAnimationFrame(updateSnow);
     }
     
-    // --- 発光設定を常にONにする修正版 ---
+    // --- 【札幌・冬のスケジュール版】発光調整ロジック ---
     function applyGlowingEffect() {
         if (!map.isStyleLoaded()) return;
         const now = new Date();
-        const currentTime = now.getHours() + now.getMinutes() / 60;
+        const hour = now.getHours();
+        const min = now.getMinutes();
+        const currentTime = hour + min / 60; // 時間を小数化 (例: 16:30 -> 16.5)
         
-        // 景色（背景）だけは時間で変える
-        let preset = (currentTime >= 6 && currentTime < 17) ? 'day' : (currentTime >= 17 && currentTime < 19) ? 'dusk' : 'night';
+        let preset;
+        let emissiveStrength = 0;
+
+        // 札幌の日没スケジュール
+        if (currentTime >= 6 && currentTime < 15) {
+            preset = 'day';     // 昼間
+            emissiveStrength = 0; 
+        } else if (currentTime >= 15 && currentTime < 16.5) {
+            preset = 'dusk';    // 夕暮れ (15:00 - 16:30)
+            emissiveStrength = 0.6; // 夕方から光り始める
+        } else {
+            preset = 'night';   // 夜間 (16:30 - 6:00)
+            emissiveStrength = 0.9; // 夜はしっかり発光
+        }
+
         map.setConfigProperty('basemap', 'lightPreset', preset);
         map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
         
-        // 砂箱レイヤーは背景に関係なく常に光らせる
         if (map.getLayer('sunabako-layer')) {
-            map.setPaintProperty('sunabako-layer', 'fill-extrusion-emissive-strength', 0.9);
+            map.setPaintProperty('sunabako-layer', 'fill-extrusion-emissive-strength', emissiveStrength);
         }
     }
     
@@ -217,7 +231,7 @@
                     'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 
                     'paint': { 
                         'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true,
-                        'fill-extrusion-emissive-strength': 0.9 // 常時発光をここにもセット
+                        'fill-extrusion-emissive-strength': 0.6 // 夕方からの開始強度
                     } 
                 });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 12, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
