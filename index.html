@@ -127,6 +127,10 @@
 
     map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
 
+    // モーダル開閉用関数
+    function openLog() { document.getElementById('log-modal').style.display = 'flex'; }
+    function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
+
     // --- 【視認性向上版】ハイブリッド雪アニメーション ---
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
@@ -144,8 +148,8 @@
             particles.push({
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
-                r: Math.random() * 2.5 + 0.5, // 少し小さめに設定
-                o: Math.random() * 0.4 + 0.2, // 透明度を抑えめに
+                r: Math.random() * 2.5 + 0.5,
+                o: Math.random() * 0.4 + 0.2,
                 vx: (Math.random() - 0.5) * 0.8,
                 vy: Math.random() * 1.2 + 0.8
             });
@@ -153,35 +157,25 @@
 
         for (let i = 0; i < particles.length; i++) {
             let p = particles[i];
-            
-            // 手前に来るほど透明にするフェード計算（画面の下20%で消えていく）
             let fadeOut = 1;
             if (p.y > canvas.height * 0.8) {
                 fadeOut = 1 - (p.y - canvas.height * 0.8) / (canvas.height * 0.2);
             }
-
             ctx.beginPath();
             ctx.fillStyle = `rgba(255, 255, 255, ${p.o * fadeOut})`;
-
             if (!is3D) {
-                // 2Dモード
                 const scale = 1 - (p.y / canvas.height) * 0.5;
                 ctx.arc(p.x, p.y, p.r * scale, 0, Math.PI * 2);
                 p.y += p.vy;
             } else {
-                // 3Dモード
                 const perspective = (p.y / canvas.height);
                 const speed = p.vy * (1 + perspective * 1.2);
                 const xShift = (p.x - canvas.width / 2) * (perspective * 0.06);
-                
-                // 手前に来てもサイズが4pxを超えないように制限
                 let displayRadius = Math.min(p.r * (1 + perspective * 1.5), 4);
                 ctx.arc(p.x + xShift, p.y, displayRadius, 0, Math.PI * 2);
-                
                 p.y += speed;
                 p.x += p.vx + xShift * 0.01;
             }
-
             if (p.y > canvas.height || p.x < -50 || p.x > canvas.width + 50 || fadeOut <= 0) {
                 p.y = -20;
                 p.x = Math.random() * canvas.width;
