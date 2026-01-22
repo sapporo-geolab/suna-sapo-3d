@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: Dynamic Snow 3D</title>
+    <title>Suna-Sapo: Hybrid Snow Edition</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -127,7 +127,7 @@
 
     map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
 
-    // --- 【新機能】視点連動型の雪アニメーション ---
+    // --- 【ハイブリッド版】視点に応じて変わる雪アニメーション ---
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
@@ -137,54 +137,48 @@
 
     function updateSnow() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const pitch = map.getPitch(); // カメラの傾き(0-85)
-        
-        // 雪の基本設定をカメラ角度に応じて変化させる
-        // pitchが大きい（3D）ほど、雪は手前に速く来るように見せる
-        const is3D = pitch > 20;
-        const speedMultiplier = 1 + (pitch / 45); 
-        
-        if (particles.length < 180) {
+        const pitch = map.getPitch(); 
+        const is3D = pitch > 25;
+
+        if (particles.length < 160) {
             particles.push({
                 x: Math.random() * canvas.width,
-                y: Math.random() * -canvas.height, // 画面外から
+                y: Math.random() * canvas.height,
                 r: Math.random() * 3 + 1,
-                vx: (Math.random() - 0.5) * 1, // 横揺れ
-                vy: (Math.random() * 1.5 + 1) * speedMultiplier, // 落下速度
-                opacity: Math.random() * 0.5 + 0.3,
-                z: Math.random() * 100 // 奥行きシミュレーション用
+                o: Math.random() * 0.5 + 0.3,
+                vx: (Math.random() - 0.5) * 1,
+                vy: Math.random() * 1.5 + 1
             });
         }
 
         for (let i = 0; i < particles.length; i++) {
             let p = particles[i];
-            
-            // 3D視点の時は、中心から外側に広がるような動きを少し加える（パース感）
-            let offsetX = 0;
-            if (is3D) {
-                const centerX = canvas.width / 2;
-                offsetX = (p.x - centerX) * (pitch / 500); 
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(255, 255, 255, ${p.o})`;
+
+            if (!is3D) {
+                // --- 2Dモード: MiniTokyo3D風（地面への収束） ---
+                const scale = 1 - (p.y / canvas.height) * 0.6;
+                ctx.arc(p.x, p.y, p.r * scale, 0, Math.PI * 2);
+                p.y += p.vy;
+            } else {
+                // --- 3Dモード: ふわふわした雪（元のスタイル） ---
+                const perspective = (p.y / canvas.height);
+                const speed = p.vy * (1 + perspective);
+                const xShift = (p.x - canvas.width / 2) * (perspective * 0.08);
+                
+                let displayRadius = p.r * (1 + perspective);
+                ctx.arc(p.x + xShift, p.y, displayRadius, 0, Math.PI * 2);
+                
+                p.y += speed;
+                p.x += p.vx + xShift * 0.02;
             }
 
-            ctx.beginPath();
-            ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
-            
-            // 3D時は手前の雪を大きく、奥を小さく
-            let displayRadius = p.r;
-            if (is3D) displayRadius = p.r * (1 + (p.y / canvas.height));
-
-            ctx.arc(p.x + offsetX, p.y, displayRadius, 0, Math.PI * 2);
-            ctx.fill();
-
-            p.x += p.vx + (is3D ? offsetX * 0.05 : 0);
-            p.y += p.vy;
-
-            // 画面外に出たらリセット
             if (p.y > canvas.height || p.x < -50 || p.x > canvas.width + 50) {
                 p.y = -20;
                 p.x = Math.random() * canvas.width;
-                p.vy = (Math.random() * 1.5 + 1) * speedMultiplier;
             }
+            ctx.fill();
         }
         requestAnimationFrame(updateSnow);
     }
