@@ -52,7 +52,7 @@
         <img id="loader-logo-img" src="https://raw.githubusercontent.com/sapporo-geolab/logo-sunahako-img/main/logo_sunasapo.png" alt="" onload="this.style.opacity='1'">
     </div>
     <div class="dot-pulse"><div></div><div></div><div></div></div>
-    <div id="status-text" style="margin-top:20px; color:#666; font-family:sans-serif; font-size:12px;">現在地を特定中...</div>
+    <div id="status-text" style="margin-top:20px; color:#666; font-family:sans-serif; font-size:12px;">現在地を取得中...</div>
 </div>
 <div id="map"></div>
 <div id="log-modal"><div class="modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:15px; overflow-y:auto; max-height:55vh;"><div style="text-align:center; color:#999;">現在、報告はありません</div></div></div></div>
@@ -117,7 +117,11 @@
         const accuracy = pos.coords.accuracy;
         lastCoords = [lng, lat];
         userMarker.setLngLat(lastCoords);
-        if (!initialGPSLocked && accuracy < 80) { initialGPSLocked = true; document.getElementById('status-text').textContent = "現在地を捕捉！"; map.jumpTo({ center: lastCoords }); }
+        if (!initialGPSLocked && accuracy < 80) { 
+            initialGPSLocked = true; 
+            document.getElementById('status-text').textContent = "現在地を取得！"; 
+            map.jumpTo({ center: lastCoords }); 
+        }
         if (isTracking) map.setCenter(lastCoords);
     }, (err) => { initialGPSLocked = true; }, { enableHighAccuracy: true });
     function jumpToCurrentLocation() {
@@ -168,27 +172,25 @@
         requestAnimationFrame(updateSnow);
     }
     
-    // --- 【札幌・冬のスケジュール版】発光調整ロジック ---
     function applyGlowingEffect() {
         if (!map.isStyleLoaded()) return;
         const now = new Date();
         const hour = now.getHours();
         const min = now.getMinutes();
-        const currentTime = hour + min / 60; // 時間を小数化 (例: 16:30 -> 16.5)
+        const currentTime = hour + min / 60;
         
         let preset;
         let emissiveStrength = 0;
 
-        // 札幌の日没スケジュール
         if (currentTime >= 6 && currentTime < 15) {
-            preset = 'day';     // 昼間
+            preset = 'day';
             emissiveStrength = 0; 
         } else if (currentTime >= 15 && currentTime < 16.5) {
-            preset = 'dusk';    // 夕暮れ (15:00 - 16:30)
-            emissiveStrength = 0.6; // 夕方から光り始める
+            preset = 'dusk';
+            emissiveStrength = 0.6;
         } else {
-            preset = 'night';   // 夜間 (16:30 - 6:00)
-            emissiveStrength = 0.9; // 夜はしっかり発光
+            preset = 'night';
+            emissiveStrength = 0.9;
         }
 
         map.setConfigProperty('basemap', 'lightPreset', preset);
@@ -201,7 +203,13 @@
     
     function hideLoader() {
         const checkGPS = setInterval(() => {
-            if (initialGPSLocked) { clearInterval(checkGPS); document.getElementById('status-text').textContent = "準備完了"; setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => { document.getElementById('loader').style.visibility = 'hidden'; }, 1200); }, 800); }
+            if (initialGPSLocked) { 
+                clearInterval(checkGPS); 
+                setTimeout(() => { 
+                    document.getElementById('loader').style.opacity = '0'; 
+                    setTimeout(() => { document.getElementById('loader').style.visibility = 'hidden'; }, 1200); 
+                }, 800); 
+            }
         }, 500);
     }
     async function loadAndRunGraphics() {
@@ -231,7 +239,7 @@
                     'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 
                     'paint': { 
                         'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true,
-                        'fill-extrusion-emissive-strength': 0.6 // 夕方からの開始強度
+                        'fill-extrusion-emissive-strength': 0.6
                     } 
                 });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 12, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
