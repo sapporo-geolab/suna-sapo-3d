@@ -2,14 +2,13 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: Realtime 3D Navigation</title>
+    <title>Suna-Sapo: GPS Locked Edition</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
     <style>
         html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
@@ -49,7 +48,7 @@
         <img id="loader-logo-img" src="https://raw.githubusercontent.com/sapporo-geolab/logo-sunahako-img/main/logo_sunasapo.png" alt="" onload="this.style.opacity='1'">
     </div>
     <div class="dot-pulse"><div></div><div></div><div></div></div>
-    <div id="status-text" style="margin-top:20px; color:#666; font-family:sans-serif; font-size:12px;">マップを準備中...</div>
+    <div id="status-text" style="margin-top:20px; color:#666; font-family:sans-serif; font-size:12px;">現在地を特定中...</div>
 </div>
 
 <div id="map"></div>
@@ -84,17 +83,12 @@
     let shelterMarkers = [];
     let sheltersVisible = false;
     let isTracking = false; 
-    let firstJumpDone = false; // 初回のジャンプが完了したか
+    let initialGPSLocked = false; // GPSの精度が確保されたか
+    let lastCoords = null;
 
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
-    const map = new mapboxgl.Map({ 
-        container: 'map', 
-        style: 'mapbox://styles/mapbox/standard', 
-        center: [141.3508, 43.0645], 
-        zoom: 17, pitch: 65, bearing: -10, attributionControl: false 
-    });
+    const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/mapbox/standard', center: [141.3508, 43.0645], zoom: 17, pitch: 65, bearing: -10, attributionControl: false });
 
-    // 現在地マーカー
     const userMarkerEl = document.createElement('div');
     userMarkerEl.style.width = '20px'; userMarkerEl.style.height = '20px';
     userMarkerEl.style.background = '#007cff'; userMarkerEl.style.border = '3px solid white';
@@ -104,57 +98,48 @@
     function handleOrientation(event) {
         if (!isTracking) return;
         let heading = event.webkitCompassHeading || (360 - event.alpha);
-        if (heading) {
-            map.setBearing(heading); 
-        }
+        if (heading) map.setBearing(heading); 
     }
+
+    // GPSの監視をページ読み込みと同時に開始
+    navigator.geolocation.watchPosition((pos) => {
+        const lng = pos.coords.longitude;
+        const lat = pos.coords.latitude;
+        const accuracy = pos.coords.accuracy;
+        lastCoords = [lng, lat];
+        userMarker.setLngLat(lastCoords);
+
+        // 精度が80m以下になったら「ロックオン」とみなす
+        if (!initialGPSLocked && accuracy < 80) {
+            initialGPSLocked = true;
+            document.getElementById('status-text').textContent = "現在地を捕捉！";
+            // 精度が確保されたので、地図をそこに移動させる準備完了
+            map.jumpTo({ center: lastCoords });
+        }
+
+        if (isTracking) {
+            map.setCenter(lastCoords);
+        }
+    }, (err) => {
+        initialGPSLocked = true; // エラー時は待たずに進める
+    }, { enableHighAccuracy: true });
 
     function jumpToCurrentLocation() {
-        firstJumpDone = false; // ボタンを押したら再度ジャンプを許可
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(res => {
-                if (res === 'granted') initGPS();
-            });
-        } else {
-            initGPS();
-        }
-    }
-
-    function initGPS() {
+        if (!lastCoords) return;
         isTracking = true;
         window.addEventListener('deviceorientation', handleOrientation);
+        map.flyTo({ center: lastCoords, zoom: 18.5, pitch: 70, speed: 1.5 });
         
-        navigator.geolocation.watchPosition((pos) => {
-            const lng = pos.coords.longitude;
-            const lat = pos.coords.latitude;
-            const accuracy = pos.coords.accuracy; // 精度（メートル）
-
-            userMarker.setLngLat([lng, lat]);
-            
-            // 精度が一定（100m以内）かつ初回のジャンプがまだの場合のみカメラを移動
-            if (isTracking && !firstJumpDone && accuracy < 100) {
-                map.flyTo({
-                    center: [lng, lat],
-                    zoom: 18.5,
-                    pitch: 70,
-                    speed: 1.2
-                });
-                firstJumpDone = true; // 一度ジャンプしたら自動追従はしない（操作を優先）
-            }
-        }, (err) => {}, { enableHighAccuracy: true });
+        // iOSコンパス許可（未許可の場合用）
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission().catch(console.error);
+        }
     }
 
-    // ユーザーが地図を触ったら追従をストップ（ズームや回転を自由にできるようにする）
-    map.on('movestart', (e) => {
-        if (e.originalEvent) { // ユーザー操作による移動の場合
-            isTracking = false; 
-            firstJumpDone = true;
-            window.removeEventListener('deviceorientation', handleOrientation);
-        }
+    map.on('dragstart', () => { 
+        isTracking = false; 
+        window.removeEventListener('deviceorientation', handleOrientation);
     });
-
-    function openLog() { document.getElementById('log-modal').style.display = 'flex'; }
-    function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
 
     function applyGlowingEffect() {
         if (!map.isStyleLoaded()) return;
@@ -165,19 +150,24 @@
     }
 
     function hideLoader() {
-        document.getElementById('status-text').textContent = "準備完了！";
-        setTimeout(() => {
-            document.getElementById('loader').style.opacity = '0';
-            setTimeout(() => { document.getElementById('loader').style.visibility = 'hidden'; }, 1200);
-        }, 2000);
+        // GPSロックオンを待ってからローディングを消す
+        const checkGPS = setInterval(() => {
+            if (initialGPSLocked) {
+                clearInterval(checkGPS);
+                document.getElementById('status-text').textContent = "準備完了";
+                setTimeout(() => {
+                    document.getElementById('loader').style.opacity = '0';
+                    setTimeout(() => { document.getElementById('loader').style.visibility = 'hidden'; }, 1200);
+                }, 800);
+            }
+        }, 500);
     }
 
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
     function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize);
-    resize();
+    window.addEventListener('resize', resize); resize();
     function updateSnow() {
         ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         if (particles.length < 150) particles.push({ x: Math.random() * canvas.width, y: -10, r: Math.random() * 3 + 1, vx: Math.random() * 1.5 - 0.75, vy: Math.random() * 2 + 1.5 });
@@ -201,7 +191,6 @@
     }
 
     map.on('load', () => {
-        document.getElementById('status-text').textContent = "砂箱データを読み込み中...";
         const csvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ca0f9f45e8a5e2064678f14eb8e7e933/raw/33abeeab3374bc93c97d208c90056b7355c04802/h301.csv';
         Papa.parse(csvUrl, {
             download: true, header: true, skipEmptyLines: true,
@@ -211,14 +200,12 @@
                     const reports = snapshot.val() || {};
                     rawData.forEach((item, idx) => { item.isGray = !!reports[idx]; });
                     reportLog = Object.keys(reports).map(id => ({ id: id, address: rawData[id]['住所'], time: reports[id].timeLabel })).reverse();
-                    updateLogPanel();
-                    loadAndRunGraphics(); 
+                    updateLogPanel(); loadAndRunGraphics(); 
                 });
                 map.addSource('sunabako-source', { 'type': 'geojson', 'data': sandboxData });
                 map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 12, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
-                updateSnow();
-                loadShelters();
+                updateSnow(); loadShelters();
             }
         });
         setInterval(() => {
