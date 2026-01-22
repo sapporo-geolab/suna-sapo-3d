@@ -29,13 +29,15 @@
         
         /* 共通モーダルスタイル */
         #log-modal, #info-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
-        .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 70vh; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; }
+        .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 85vh; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; }
         
-        /* インフォメーションモーダル専用（ダーク調） */
-        .info-content { background: rgba(30, 30, 30, 0.95); color: #eee; line-height: 1.6; padding: 25px; border-radius: 15px; border: 1px solid #444; }
-        .info-content b { color: #fff; border-bottom: 1px solid #00fbff; padding-bottom: 2px; }
+        /* インフォメーションモーダル専用（ダーク調・小サイズ） */
+        .info-content { background: rgba(30, 30, 30, 0.95); color: #eee; line-height: 1.5; padding: 20px; border-radius: 15px; border: 1px solid #444; font-size: 13px; }
+        .info-content h3 { font-size: 16px; margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px; }
+        .info-content b { color: #fff; }
         .info-content a { color: #00fbff; text-decoration: none; }
-        .close-btn-round { background: #444; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; float: right; margin-top: -10px; margin-right: -10px; font-weight: bold; }
+        .info-content p { margin: 8px 0; }
+        .close-btn-round { background: #444; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; float: right; font-weight: bold; }
 
         .modal-header { padding: 18px; background: #f8f9fa; font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; }
         .close-modal { cursor: pointer; font-size: 24px; color: #666; }
@@ -69,12 +71,19 @@
     <div class="modal-content info-content">
         <button class="close-btn-round" onclick="closeInfo()">✕</button>
         <h3 style="margin-top:0;">すなサポ について</h3>
-        <p>このアプリケーションは <b>岡本 卓也</b> により作成されました。</p>
-        <p>本アプリケーションが利用する砂箱および避難所の位置情報データは、札幌市ICT活用プラットフォーム「DATA-SMART CITY SAPPORO」において公開されているオープンデータを利用しています。</p>
-        <p>砂箱データは平成30年時点のものであり、現地の状況と必ずしも一致しない場合があります。</p>
-        <p>本アプリケーションの表示内容やデータについて、札幌市および関連事業者への直接の問い合わせは行わないでください。</p>
-        <p>ソースコードは<a href="https://github.com/sapporo-geolab" target="_blank">GitHub リポジトリ</a>にて公開されています。</p>
-        <p style="font-size: 12px; color: #888; text-align: center; margin-top: 20px;">©2026 Takuya Okamoto</p>
+        <p>このアプリケーションは <a href="https://github.com/sapporo-geolab" target="_blank"><b>岡本 卓也</b></a> により作成されました。</p>
+        <p>本アプリケーションが利用する砂箱および避難所の位置情報データは、札幌市ICT活用プラットフォーム「<a href="https://data-smartcity-sapporo.jp/" target="_blank"><b>DATA-SMART CITY SAPPORO</b></a>」において公開されているオープンデータを利用しています。</p>
+        
+        <p style="margin-top:15px; font-weight:bold;">💡 つかいかた</p>
+        <p style="margin-left:5px; margin-bottom:4px;">・<b>砂切れを教える</b>: 地図上の砂箱をタップして「砂切れをみんなに教える」ボタンを押してください。</p>
+        <p style="margin-left:5px; margin-bottom:4px;">・<b>状況を確認する</b>: 右上の砂箱アイコンを押すと、現在報告されている砂切れリストを確認できます。</p>
+        <p style="margin-left:5px; margin-bottom:4px;">・<b>避難所を見る</b>: 右側の避難所アイコンを押すと、市内の避難所が光の柱とともに表示されます。</p>
+        <p style="margin-left:5px; margin-bottom:4px;">・<b>現在地へ行く</b>: 右側のターゲットマークを押すと、あなたの今いる場所へジャンプします。</p>
+
+        <p style="margin-top:15px; font-size:11.5px; color:#ccc;">砂箱データは平成30年時点のものであり、現地の状況と必ずしも一致しない場合があります。</p>
+        <p style="font-size:11.5px; color:#ccc;">本アプリケーションの表示内容やデータについて、札幌市および関連事業者への直接の問い合わせは行わないでください。</p>
+        <p>ソースコードは <a href="https://github.com/sapporo-geolab" target="_blank">GitHub リポジトリ</a> にて公開されています。</p>
+        <p style="font-size: 11px; color: #888; text-align: center; margin-top: 15px;">©2026 Takuya Okamoto</p>
     </div>
 </div>
 
@@ -153,13 +162,11 @@
 
     map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
 
-    // モーダル操作用関数
     function openLog() { document.getElementById('log-modal').style.display = 'flex'; }
     function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
     function openInfo() { document.getElementById('info-modal').style.display = 'flex'; }
     function closeInfo() { document.getElementById('info-modal').style.display = 'none'; }
 
-    // --- 雪アニメーション ---
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
@@ -189,12 +196,10 @@
                 const xShift = (p.x - canvas.width / 2) * (perspective * 0.06);
                 let displayRadius = Math.min(p.r * (1 + perspective * 1.5), 4);
                 ctx.arc(p.x + xShift, p.y, displayRadius, 0, Math.PI * 2);
-                p.y += speed;
-                p.x += p.vx + xShift * 0.01;
+                p.y += speed; p.x += p.vx + xShift * 0.01;
             }
             if (p.y > canvas.height || p.x < -50 || p.x > canvas.width + 50 || fadeOut <= 0) {
-                p.y = -20;
-                p.x = Math.random() * canvas.width;
+                p.y = -20; p.x = Math.random() * canvas.width;
             }
             ctx.fill();
         }
