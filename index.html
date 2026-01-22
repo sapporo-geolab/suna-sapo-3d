@@ -26,7 +26,10 @@
         .log-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png'); background-size: 40px; }
         .shelter-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png'); background-size: 32px; background-color: white; transition: background-color 0.3s; }
         .active-shelter { background-color: #4cd964 !important; }
+        
+        /* 以前の現在地ボタン（もし残っていれば）を完全に削除 */
         .mapboxgl-ctrl-geolocate { display: none !important; }
+
         #log-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
         .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 70vh; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; }
         .modal-header { padding: 18px; background: #f8f9fa; font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; }
@@ -82,7 +85,7 @@
     let reportLog = [];
     let shelterMarkers = [];
     let sheltersVisible = false;
-    let isTracking = false; // 追跡中フラグ
+    let isTracking = false; 
 
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
     const map = new mapboxgl.Map({ 
@@ -92,55 +95,57 @@
         zoom: 17, pitch: 65, bearing: -10, attributionControl: false 
     });
 
-    const geolocate = new mapboxgl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true,
-        showUserHeading: true
-    });
-    map.addControl(geolocate);
+    // --- 【修正】現在地マーカーを手動で作成 ---
+    const userMarkerEl = document.createElement('div');
+    userMarkerEl.style.width = '20px'; userMarkerEl.style.height = '20px';
+    userMarkerEl.style.background = '#007cff'; userMarkerEl.style.border = '3px solid white';
+    userMarkerEl.style.borderRadius = '50%'; userMarkerEl.style.boxShadow = '0 0 15px rgba(0,124,255,0.8)';
+    const userMarker = new mapboxgl.Marker(userMarkerEl).setLngLat([0, 0]).addTo(map);
 
-    // 【重要】コンパス情報を取得して地図を回転させる関数
+    // --- 【修正】方位同期ロジック ---
     function handleOrientation(event) {
         if (!isTracking) return;
-        
-        // iOS/Androidで方位の取得方法が異なるための処理
         let heading = event.webkitCompassHeading || (360 - event.alpha);
-        
         if (heading) {
-            map.easeTo({
-                bearing: -heading, // 進行方向を上にする
-                pitch: 65,         // 3D角度を維持
-                duration: 100,     // 反応を速くする
-                easing: (t) => t   // リニアな動き
-            });
+            map.setBearing(heading); // 地図全体を回転（向きを上にする）
         }
     }
 
+    // --- 【修正】GPSジャンプロジック ---
     function jumpToCurrentLocation() {
+        // iPhone用の許可リクエスト
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().then(response => {
-                if (response === 'granted') {
-                    startTracking();
-                }
-            }).catch(console.error);
+            DeviceOrientationEvent.requestPermission().then(res => {
+                if (res === 'granted') initGPS();
+            });
         } else {
-            startTracking();
+            initGPS();
         }
     }
 
-    function startTracking() {
+    function initGPS() {
         isTracking = true;
-        window.addEventListener('deviceorientation', handleOrientation, true);
-        const geoBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
-        if (geoBtn) geoBtn.click();
+        window.addEventListener('deviceorientation', handleOrientation);
         
-        setTimeout(() => {
-            map.easeTo({ zoom: 18.5, pitch: 65, duration: 1000 });
-        }, 500);
+        navigator.geolocation.watchPosition((pos) => {
+            const lng = pos.coords.longitude;
+            const lat = pos.coords.latitude;
+            userMarker.setLngLat([lng, lat]); // 青い点を移動
+            
+            if (isTracking) {
+                map.flyTo({
+                    center: [lng, lat],
+                    zoom: 18.5,
+                    pitch: 70, // 斜め視点
+                    speed: 1.5,
+                    curve: 1
+                });
+            }
+        }, (err) => alert("位置情報を取得できませんでした"), { enableHighAccuracy: true });
     }
 
-    // 画面をドラッグしたら追跡を弱める（任意）
-    map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
+    // 手動操作されたら自動追跡（向き・中心）を停止
+    map.on('dragstart', () => { isTracking = false; });
 
     function openLog() { document.getElementById('log-modal').style.display = 'flex'; }
     function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
