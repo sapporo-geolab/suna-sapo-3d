@@ -7,33 +7,19 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <style>
         html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
-        
-        /* ローディング画面 */
-        #loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #ffffff; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 10001;
-            transition: opacity 1.2s ease, visibility 1.2s;
-        }
-        #loader-logo-container {
-            width: 240px; height: 240px; margin-bottom: 20px;
-            display: flex; justify-content: center; align-items: center;
-        }
-        #loader-logo-img {
-            max-width: 100%; max-height: 100%;
-            border-radius: 0; 
-            box-shadow: none; 
-            object-fit: contain;
-            opacity: 0; transition: opacity 0.8s ease;
-        }
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10001; transition: opacity 1.2s ease, visibility 1.2s; }
+        #loader-logo-container { width: 240px; height: 240px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; }
+        #loader-logo-img { max-width: 100%; max-height: 100%; box-shadow: none; object-fit: contain; opacity: 0; transition: opacity 0.8s ease; }
         .dot-pulse { display: flex; align-items: center; justify-content: center; }
         .dot-pulse div { width: 14px; height: 14px; margin: 0 10px; background-color: #00fbff; border-radius: 50%; animation: dot-pulse 1.4s infinite ease-in-out both; }
         @keyframes dot-pulse { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1.2); opacity: 1; } }
-
-        /* UIパーツ */
         .info-panel { position: absolute; top: 15px; left: 15px; z-index: 1000; color: white; font-family: sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }
         #time-display { font-size: 24px; font-weight: bold; }
         .mt-controls { position: absolute; top: 15px; right: 15px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
@@ -45,7 +31,6 @@
         .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 70vh; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; }
         .modal-header { padding: 18px; background: #f8f9fa; font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; }
         .close-modal { cursor: pointer; font-size: 24px; color: #666; }
-        .mapboxgl-popup-content { border-radius: 12px !important; padding: 15px !important; }
         .pop-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 10px; cursor: pointer; font-size: 14px; }
         .report-btn-red { background: #ff3b30 !important; color: white !important; }
         .report-btn-disabled { background: #cccccc; color: #ffffff; cursor: not-allowed; }
@@ -80,13 +65,25 @@
 </div>
 
 <script>
+    // --- Firebase設定 ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCiSrqwXpRYYYfjkhtLo2lePrN1rjPaPiY",
+      authDomain: "suna-sapo-3d.firebaseapp.com",
+      projectId: "suna-sapo-3d",
+      storageBucket: "suna-sapo-3d.firebasestorage.app",
+      messagingSenderId: "618496872034",
+      appId: "1:618496872034:web:050fef3a74fa2af0b88b3b",
+      databaseURL: "https://suna-sapo-3d-default-rtdb.firebaseio.com" 
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     let rawData = [];
     let sandboxData = { type: 'FeatureCollection', features: [] };
     let reportLog = [];
     let shelterMarkers = [];
     let sheltersVisible = false;
 
-    // --- マップ設定 ---
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
     const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/mapbox/standard', center: [141.3508, 43.0645], zoom: 17, pitch: 65, bearing: -10, attributionControl: false });
 
@@ -142,10 +139,26 @@
             download: true, header: true, skipEmptyLines: true,
             complete: async function(results) {
                 rawData = results.data;
+                
+                db.ref('reports').on('value', (snapshot) => {
+                    const reports = snapshot.val() || {};
+                    rawData.forEach((item, idx) => {
+                        item.isGray = !!reports[idx];
+                    });
+                    reportLog = Object.keys(reports).map(id => ({
+                        id: id,
+                        address: rawData[id]['住所'],
+                        time: reports[id].timeLabel
+                    })).reverse();
+                    
+                    updateLogPanel();
+                    loadAndRunGraphics(); 
+                });
+
                 map.addSource('sunabako-source', { 'type': 'geojson', 'data': sandboxData });
                 map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 12, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
-                await loadAndRunGraphics(); updateSnow();
+                updateSnow();
                 loadShelters();
             }
         });
@@ -186,15 +199,16 @@
     }
 
     window.reportEmpty = function(id) {
-        if (rawData[id].isGray) return; rawData[id].isGray = true;
-        reportLog.unshift({ id: id, address: rawData[id]['住所'], time: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}) });
-        updateLogPanel(); loadAndRunGraphics();
+        db.ref('reports/' + id).set({
+            time: Date.now(),
+            timeLabel: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})
+        });
         const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove(); 
     };
 
     window.markAsDone = function(logIdx) {
-        const id = reportLog[logIdx].id; rawData[id].isGray = false; reportLog.splice(logIdx, 1);
-        updateLogPanel(); loadAndRunGraphics();
+        const id = reportLog[logIdx] ? reportLog[logIdx].id : logIdx;
+        db.ref('reports/' + id).remove();
         const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove();
     };
 
@@ -210,8 +224,8 @@
     map.on('click', 'sunabako-click-area', (e) => {
         const p = e.features[0].properties;
         if (p.id !== undefined) {
-            const isGray = rawData[p.id].isGray; const logIdx = reportLog.findIndex(l => l.id == p.id);
-            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`<div style="font-family: sans-serif; width: 220px; color: #333;"><img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;"><p style="margin: 10px 0 5px; font-size:14px;"><strong>${rawData[p.id]['住所']}</strong></p>${isGray ? `<div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div><button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button><button class="pop-btn done-btn-green" onclick="markAsDone(${logIdx})">補充されました</button>` : `<button class="pop-btn pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>`}</div>`).addTo(map);
+            const isGray = rawData[p.id].isGray;
+            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`<div style="font-family: sans-serif; width: 220px; color: #333;"><img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;"><p style="margin: 10px 0 5px; font-size:14px;"><strong>${rawData[p.id]['住所']}</strong></p>${isGray ? `<div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div><button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button><button class="pop-btn done-btn-green" onclick="markAsDone(${p.id})">補充されました</button>` : `<button class="pop-btn pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>`}</div>`).addTo(map);
         }
     });
 
