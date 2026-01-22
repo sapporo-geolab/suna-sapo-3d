@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: Winter Edition</title>
+    <title>Suna-Sapo: Winter Edition Fix</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -87,7 +87,18 @@
     let lastCoords = null;
 
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
-    const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/mapbox/standard', center: [141.3508, 43.0645], zoom: 17, pitch: 65, bearing: -10, attributionControl: false });
+    const map = new mapboxgl.Map({ 
+        container: 'map', 
+        style: 'mapbox://styles/mapbox/standard', 
+        center: [141.3508, 43.0645], 
+        zoom: 17, pitch: 65, bearing: -10, attributionControl: false 
+    });
+
+    // スタイル情報のインポートが完了した瞬間に設定を流し込む
+    map.on('style.import.load', () => {
+        map.setConfigProperty('basemap', 'snowIntensity', 1.0);
+        map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
+    });
 
     const userMarkerEl = document.createElement('div');
     userMarkerEl.style.width = '20px'; userMarkerEl.style.height = '20px';
@@ -127,7 +138,6 @@
 
     map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
 
-    // --- 雪アニメーション設定 ---
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
@@ -148,146 +158,4 @@
             ctx.beginPath();
             ctx.fillStyle = `rgba(255, 255, 255, ${p.o * fadeOut})`;
             if (!is3D) {
-                const scale = 1 - (p.y / canvas.height) * 0.5;
-                ctx.arc(p.x, p.y, p.r * scale, 0, Math.PI * 2);
-                p.y += p.vy;
-            } else {
-                const perspective = (p.y / canvas.height);
-                const speed = p.vy * (1 + perspective * 1.2);
-                const xShift = (p.x - canvas.width / 2) * (perspective * 0.06);
-                let displayRadius = Math.min(p.r * (1 + perspective * 1.5), 4);
-                ctx.arc(p.x + xShift, p.y, displayRadius, 0, Math.PI * 2);
-                p.y += speed; p.x += p.vx + xShift * 0.01;
-            }
-            if (p.y > canvas.height || p.x < -50 || p.x > canvas.width + 50 || fadeOut <= 0) {
-                p.y = -20; p.x = Math.random() * canvas.width;
-            }
-            ctx.fill();
-        }
-        requestAnimationFrame(updateSnow);
-    }
-
-    // --- マップデザイン・冬モードの適用 ---
-    function applyGlowingEffect() {
-        if (!map.isStyleLoaded()) return;
-        const hour = new Date().getHours();
-        let preset = (hour >= 6 && hour < 17) ? 'day' : (hour >= 17 && hour < 19) ? 'dusk' : (hour >= 4 && hour < 6) ? 'dawn' : 'night';
-        
-        // 昼夜プリセットの適用
-        map.setConfigProperty('basemap', 'lightPreset', preset);
-        
-        // 冬モード（積雪）の適用: 公園を白くし、街全体を冬景色にする
-        map.setConfigProperty('basemap', 'snowIntensity', 1.0); 
-        
-        // 不要なPOIアイコンの非表示
-        map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
-    }
-
-    function hideLoader() {
-        const checkGPS = setInterval(() => {
-            if (initialGPSLocked) {
-                clearInterval(checkGPS);
-                document.getElementById('status-text').textContent = "準備完了";
-                setTimeout(() => {
-                    document.getElementById('loader').style.opacity = '0';
-                    setTimeout(() => { document.getElementById('loader').style.visibility = 'hidden'; }, 1200);
-                }, 800);
-            }
-        }, 500);
-    }
-
-    async function loadAndRunGraphics() {
-        const gistUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ef76bf0034584f3c6ee30d7489f7f427/raw/graphics.js?t=' + Date.now();
-        try {
-            const response = await fetch(gistUrl);
-            const drawFunc = new Function('map', 'rawData', 'sandboxData', (await response.text()) + '\nupdateSandboxGraphics(map, rawData, sandboxData);');
-            drawFunc(map, rawData, sandboxData);
-            applyGlowingEffect();
-            hideLoader();
-        } catch (e) { hideLoader(); }
-    }
-
-    map.on('load', () => {
-        const csvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ca0f9f45e8a5e2064678f14eb8e7e933/raw/33abeeab3374bc93c97d208c90056b7355c04802/h301.csv';
-        Papa.parse(csvUrl, {
-            download: true, header: true, skipEmptyLines: true,
-            complete: async function(results) {
-                rawData = results.data;
-                db.ref('reports').on('value', (snapshot) => {
-                    const reports = snapshot.val() || {};
-                    rawData.forEach((item, idx) => { item.isGray = !!reports[idx]; });
-                    reportLog = Object.keys(reports).map(id => ({ id: id, address: rawData[id]['住所'], time: reports[id].timeLabel })).reverse();
-                    updateLogPanel(); loadAndRunGraphics(); 
-                });
-                map.addSource('sunabako-source', { 'type': 'geojson', 'data': sandboxData });
-                map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
-                map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 12, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
-                updateSnow(); loadShelters();
-            }
-        });
-        setInterval(() => {
-            document.getElementById('date-display').textContent = `${new Date().getFullYear()}年${new Date().getMonth()+1}月${new Date().getDate()}日`;
-            document.getElementById('time-display').textContent = new Date().toLocaleTimeString('ja-JP', {hour12:false});
-            applyGlowingEffect();
-        }, 1000);
-    });
-
-    map.on('zoomend', loadAndRunGraphics);
-
-    function toggleShelters() {
-        sheltersVisible = !sheltersVisible;
-        shelterMarkers.forEach(m => { if (sheltersVisible) m.addTo(map); else m.remove(); });
-        document.getElementById('shelter-btn').classList.toggle('active-shelter', sheltersVisible);
-    }
-
-    function loadShelters() {
-        const shelterCsvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/439bfe19b1a67005f9ca196dc8de7749/raw/55a5b8e97eab134fae8d880d05daa40c916971b4/shelters.csv';
-        const shelterIconUrl = 'https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png';
-        Papa.parse(shelterCsvUrl, {
-            download: true, header: true, skipEmptyLines: true,
-            complete: function(results) {
-                results.data.forEach(row => {
-                    const lon = parseFloat(row['経度']); const lat = parseFloat(row['緯度']);
-                    if (!isNaN(lon) && !isNaN(lat)) {
-                        const container = document.createElement('div'); container.className = 'shelter-beam-container';
-                        const beam = document.createElement('div'); beam.className = 'shelter-beam';
-                        const iconMark = document.createElement('div'); iconMark.className = 'shelter-logo-icon'; iconMark.style.backgroundImage = `url('${shelterIconUrl}')`;
-                        container.appendChild(beam); container.appendChild(iconMark);
-                        const marker = new mapboxgl.Marker(container).setLngLat([lon, lat]).setPopup(new mapboxgl.Popup().setHTML(`<div style="color:#333; padding:5px; font-family:sans-serif;"><b>${row['施設名'] || row['避難所名']}</b></div>`));
-                        shelterMarkers.push(marker); if (sheltersVisible) marker.addTo(map);
-                    }
-                });
-            }
-        });
-    }
-
-    window.reportEmpty = function(id) {
-        db.ref('reports/' + id).set({ time: Date.now(), timeLabel: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}) });
-        const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove(); 
-    };
-
-    window.markAsDone = function(logIdx) {
-        const id = reportLog[logIdx] ? reportLog[logIdx].id : logIdx;
-        db.ref('reports/' + id).remove();
-        const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove();
-    };
-
-    function updateLogPanel() {
-        const list = document.getElementById('log-list'); if (reportLog.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999;">現在、報告はありません</div>'; return; }
-        list.innerHTML = reportLog.map((log, i) => `
-            <div style="border-bottom:1px solid #eee; padding:12px 0; display:flex; justify-content:space-between; align-items:center;">
-                <div onclick="closeLog(); map.flyTo({center:[${rawData[log.id]['経度（度）']}, ${rawData[log.id]['緯度（度）']}], zoom:18.5})" style="cursor:pointer;"><div style="color:#ff3b30; font-size:11px;">確認：${log.time}</div><div style="font-weight:bold; font-size:13px;">${log.address.replace('北海道札幌市', '')}</div></div>
-                <button onclick="markAsDone(${i})" style="background:#4cd964; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">補充されました</button>
-            </div>`).join('');
-    }
-
-    map.on('click', 'sunabako-click-area', (e) => {
-        const p = e.features[0].properties;
-        if (p.id !== undefined) {
-            const isGray = rawData[p.id].isGray;
-            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`<div style="font-family: sans-serif; width: 220px; color: #333;"><img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;"><p style="margin: 10px 0 5px; font-size:14px;"><strong>${rawData[p.id]['住所']}</strong></p>${isGray ? `<div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div><button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button><button class="pop-btn done-btn-green" onclick="markAsDone(${p.id})">補充されました</button>` : `<button class="pop-btn pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>`}</div>`).addTo(map);
-        }
-    });
-</script>
-</body>
-</html>
+                const scale = 1 - (p.y / canvas.height)
