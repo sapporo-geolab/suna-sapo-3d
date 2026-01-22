@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: Winter White Edition</title>
+    <title>Suna-Sapo: Winter Complete Edition</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -50,6 +50,7 @@
 <div id="map"></div>
 <div id="log-modal"><div class="modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:15px; overflow-y:auto; max-height:55vh;"><div style="text-align:center; color:#999;">現在、報告はありません</div></div></div></div>
 <canvas id="snow-canvas"></canvas>
+
 <div class="info-panel"><div id="date-display">----年--月--日(-)</div><div id="time-display">00:00:00</div></div>
 <div class="mt-controls">
     <button class="mt-btn log-toggle-btn" onclick="openLog()"></button>
@@ -89,26 +90,31 @@
         zoom: 17, pitch: 65, bearing: -10, attributionControl: false 
     });
 
-    // --- 【確実版】公園色を白にするロジック ---
-    function applyWinterColors() {
+    // --- 【重要】冬の景色とスッキリした画面を作る関数 ---
+    function applyWinterDesign() {
         if (!map.isStyleLoaded()) return;
-        // Standardスタイルの内部レイヤー「landuse」の色を強制的に白に変える
-        // 公園(park)や緑地(grass)が含まれるレイヤーを狙い撃ち
+
+        // 1. 公園・緑地・森を真っ白（#ffffff）にする
         try {
             map.setPaintProperty('landuse', 'fill-color', [
-                'match',
-                ['get', 'class'],
-                ['park', 'grass', 'wood', 'scrub'], '#f5f5f5', // 冬の白
-                '#e0e0e0' // その他
+                'match', ['get', 'class'],
+                ['park', 'grass', 'wood', 'scrub', 'glacier'], '#ffffff',
+                '#f0f0f0' // それ以外も少し白っぽく
             ]);
-            map.setConfigProperty('basemap', 'snowIntensity', 1.0);
-        } catch (e) {
-            console.log("Waiting for landuse layer...");
-        }
+        } catch (e) {}
+
+        // 2. 店名、ビル名、POIアイコンを力技で消す（透明度を0にする）
+        const layers = map.getStyle().layers;
+        layers.forEach(layer => {
+            if (layer.type === 'symbol') {
+                map.setLayoutProperty(layer.id, 'visibility', 'none');
+            }
+        });
     }
 
-    map.on('style.load', applyWinterColors);
-    map.on('idle', applyWinterColors); // 地図が安定した時にもう一度
+    // 地図の準備ができたら実行（二重に保険をかける）
+    map.on('style.load', applyWinterDesign);
+    map.on('idle', applyWinterDesign);
 
     const userMarkerEl = document.createElement('div');
     userMarkerEl.style.width = '20px'; userMarkerEl.style.height = '20px';
@@ -190,7 +196,7 @@
         const hour = new Date().getHours();
         let preset = (hour >= 6 && hour < 17) ? 'day' : (hour >= 17 && hour < 19) ? 'dusk' : (hour >= 4 && hour < 6) ? 'dawn' : 'night';
         map.setConfigProperty('basemap', 'lightPreset', preset);
-        applyWinterColors();
+        applyWinterDesign(); // 冬のデザインを適用
     }
 
     function hideLoader() {
