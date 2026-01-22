@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: Stable Winter Edition</title>
+    <title>Suna-Sapo: Winter White Edition</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -48,7 +48,6 @@
 </div>
 
 <div id="map"></div>
-
 <div id="log-modal"><div class="modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:15px; overflow-y:auto; max-height:55vh;"><div style="text-align:center; color:#999;">現在、報告はありません</div></div></div></div>
 <canvas id="snow-canvas"></canvas>
 <div class="info-panel"><div id="date-display">----年--月--日(-)</div><div id="time-display">00:00:00</div></div>
@@ -90,10 +89,26 @@
         zoom: 17, pitch: 65, bearing: -10, attributionControl: false 
     });
 
-    map.on('style.import.load', () => {
-        map.setConfigProperty('basemap', 'snowIntensity', 1.0);
-        map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
-    });
+    // --- 【確実版】公園色を白にするロジック ---
+    function applyWinterColors() {
+        if (!map.isStyleLoaded()) return;
+        // Standardスタイルの内部レイヤー「landuse」の色を強制的に白に変える
+        // 公園(park)や緑地(grass)が含まれるレイヤーを狙い撃ち
+        try {
+            map.setPaintProperty('landuse', 'fill-color', [
+                'match',
+                ['get', 'class'],
+                ['park', 'grass', 'wood', 'scrub'], '#f5f5f5', // 冬の白
+                '#e0e0e0' // その他
+            ]);
+            map.setConfigProperty('basemap', 'snowIntensity', 1.0);
+        } catch (e) {
+            console.log("Waiting for landuse layer...");
+        }
+    }
+
+    map.on('style.load', applyWinterColors);
+    map.on('idle', applyWinterColors); // 地図が安定した時にもう一度
 
     const userMarkerEl = document.createElement('div');
     userMarkerEl.style.width = '20px'; userMarkerEl.style.height = '20px';
@@ -107,52 +122,31 @@
         if (heading) map.setBearing(heading); 
     }
 
-    // --- GPS監視開始 ---
     navigator.geolocation.watchPosition((pos) => {
         const lng = pos.coords.longitude;
         const lat = pos.coords.latitude;
         const accuracy = pos.coords.accuracy;
         lastCoords = [lng, lat];
         userMarker.setLngLat(lastCoords);
-
         if (!initialGPSLocked && accuracy < 70) {
             initialGPSLocked = true;
-            document.getElementById('status-text').textContent = "現在地を捕捉！";
             map.jumpTo({ center: lastCoords });
         }
         if (isTracking) map.setCenter(lastCoords);
-    }, (err) => { 
-        console.warn("GPS Error:", err);
-    }, { enableHighAccuracy: true });
+    }, null, { enableHighAccuracy: true });
 
-    // --- 【重要】強制解除タイマー（10秒） ---
-    setTimeout(() => {
-        if (!initialGPSLocked) {
-            initialGPSLocked = true;
-            console.log("GPS timeout reached: Launching map anyway.");
-            if (lastCoords) map.jumpTo({ center: lastCoords });
-        }
-    }, 10000);
+    setTimeout(() => { initialGPSLocked = true; }, 10000);
 
     function jumpToCurrentLocation() {
-        if (!lastCoords) {
-            alert("現在地を取得中です。しばらくお待ちください。");
-            return;
-        }
+        if (!lastCoords) return;
         isTracking = true;
         window.addEventListener('deviceorientation', handleOrientation);
         map.flyTo({ center: lastCoords, zoom: 18.5, pitch: 70, speed: 1.5 });
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            DeviceOrientationEvent.requestPermission().catch(console.error);
-        }
     }
 
-    map.on('dragstart', () => { 
-        isTracking = false; 
-        window.removeEventListener('deviceorientation', handleOrientation);
-    });
+    map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
 
-    // --- 雪アニメーション ---
+    // 雪アニメーション
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
@@ -196,7 +190,7 @@
         const hour = new Date().getHours();
         let preset = (hour >= 6 && hour < 17) ? 'day' : (hour >= 17 && hour < 19) ? 'dusk' : (hour >= 4 && hour < 6) ? 'dawn' : 'night';
         map.setConfigProperty('basemap', 'lightPreset', preset);
-        map.setConfigProperty('basemap', 'snowIntensity', 1.0);
+        applyWinterColors();
     }
 
     function hideLoader() {
@@ -246,8 +240,7 @@
             applyGlowingEffect();
         }, 1000);
     });
-    
-    // 避難所読み込み
+
     const shelterCsvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/439bfe19b1a67005f9ca196dc8de7749/raw/55a5b8e97eab134fae8d880d05daa40c916971b4/shelters.csv';
     const shelterIconUrl = 'https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png';
     function toggleShelters() {
@@ -274,7 +267,6 @@
         }
         document.getElementById('shelter-btn').classList.toggle('active-shelter', sheltersVisible);
     }
-
     window.reportEmpty = function(id) {
         db.ref('reports/' + id).set({ time: Date.now(), timeLabel: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}) });
         const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove(); 
