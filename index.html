@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: GPS Locked Edition</title>
+    <title>Suna-Sapo: Dynamic Snow 3D</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -83,7 +83,7 @@
     let shelterMarkers = [];
     let sheltersVisible = false;
     let isTracking = false; 
-    let initialGPSLocked = false; // GPSの精度が確保されたか
+    let initialGPSLocked = false;
     let lastCoords = null;
 
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
@@ -101,45 +101,93 @@
         if (heading) map.setBearing(heading); 
     }
 
-    // GPSの監視をページ読み込みと同時に開始
     navigator.geolocation.watchPosition((pos) => {
         const lng = pos.coords.longitude;
         const lat = pos.coords.latitude;
         const accuracy = pos.coords.accuracy;
         lastCoords = [lng, lat];
         userMarker.setLngLat(lastCoords);
-
-        // 精度が80m以下になったら「ロックオン」とみなす
         if (!initialGPSLocked && accuracy < 80) {
             initialGPSLocked = true;
             document.getElementById('status-text').textContent = "現在地を捕捉！";
-            // 精度が確保されたので、地図をそこに移動させる準備完了
             map.jumpTo({ center: lastCoords });
         }
-
-        if (isTracking) {
-            map.setCenter(lastCoords);
-        }
-    }, (err) => {
-        initialGPSLocked = true; // エラー時は待たずに進める
-    }, { enableHighAccuracy: true });
+        if (isTracking) map.setCenter(lastCoords);
+    }, (err) => { initialGPSLocked = true; }, { enableHighAccuracy: true });
 
     function jumpToCurrentLocation() {
         if (!lastCoords) return;
         isTracking = true;
         window.addEventListener('deviceorientation', handleOrientation);
         map.flyTo({ center: lastCoords, zoom: 18.5, pitch: 70, speed: 1.5 });
-        
-        // iOSコンパス許可（未許可の場合用）
         if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
             DeviceOrientationEvent.requestPermission().catch(console.error);
         }
     }
 
-    map.on('dragstart', () => { 
-        isTracking = false; 
-        window.removeEventListener('deviceorientation', handleOrientation);
-    });
+    map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
+
+    // --- 【新機能】視点連動型の雪アニメーション ---
+    const canvas = document.getElementById('snow-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+
+    function updateSnow() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const pitch = map.getPitch(); // カメラの傾き(0-85)
+        
+        // 雪の基本設定をカメラ角度に応じて変化させる
+        // pitchが大きい（3D）ほど、雪は手前に速く来るように見せる
+        const is3D = pitch > 20;
+        const speedMultiplier = 1 + (pitch / 45); 
+        
+        if (particles.length < 180) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * -canvas.height, // 画面外から
+                r: Math.random() * 3 + 1,
+                vx: (Math.random() - 0.5) * 1, // 横揺れ
+                vy: (Math.random() * 1.5 + 1) * speedMultiplier, // 落下速度
+                opacity: Math.random() * 0.5 + 0.3,
+                z: Math.random() * 100 // 奥行きシミュレーション用
+            });
+        }
+
+        for (let i = 0; i < particles.length; i++) {
+            let p = particles[i];
+            
+            // 3D視点の時は、中心から外側に広がるような動きを少し加える（パース感）
+            let offsetX = 0;
+            if (is3D) {
+                const centerX = canvas.width / 2;
+                offsetX = (p.x - centerX) * (pitch / 500); 
+            }
+
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+            
+            // 3D時は手前の雪を大きく、奥を小さく
+            let displayRadius = p.r;
+            if (is3D) displayRadius = p.r * (1 + (p.y / canvas.height));
+
+            ctx.arc(p.x + offsetX, p.y, displayRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            p.x += p.vx + (is3D ? offsetX * 0.05 : 0);
+            p.y += p.vy;
+
+            // 画面外に出たらリセット
+            if (p.y > canvas.height || p.x < -50 || p.x > canvas.width + 50) {
+                p.y = -20;
+                p.x = Math.random() * canvas.width;
+                p.vy = (Math.random() * 1.5 + 1) * speedMultiplier;
+            }
+        }
+        requestAnimationFrame(updateSnow);
+    }
 
     function applyGlowingEffect() {
         if (!map.isStyleLoaded()) return;
@@ -150,7 +198,6 @@
     }
 
     function hideLoader() {
-        // GPSロックオンを待ってからローディングを消す
         const checkGPS = setInterval(() => {
             if (initialGPSLocked) {
                 clearInterval(checkGPS);
@@ -161,22 +208,6 @@
                 }, 800);
             }
         }, 500);
-    }
-
-    const canvas = document.getElementById('snow-canvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-    window.addEventListener('resize', resize); resize();
-    function updateSnow() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        if (particles.length < 150) particles.push({ x: Math.random() * canvas.width, y: -10, r: Math.random() * 3 + 1, vx: Math.random() * 1.5 - 0.75, vy: Math.random() * 2 + 1.5 });
-        ctx.beginPath();
-        for (let i = 0; i < particles.length; i++) {
-            let p = particles[i]; ctx.moveTo(p.x, p.y); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            p.x += p.vx; p.y += p.vy; if (p.y > canvas.height) { particles.splice(i, 1); i--; }
-        }
-        ctx.fill(); requestAnimationFrame(updateSnow);
     }
 
     async function loadAndRunGraphics() {
