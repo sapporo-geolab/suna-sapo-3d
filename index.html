@@ -27,19 +27,20 @@
         .active-shelter { background-color: #4cd964 !important; }
         
         #log-modal, #info-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
-        .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 90vh; border-radius: 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; position: relative; overflow: hidden; }
         
-        /* インフォメーションモーダル（超凝縮デザイン） */
-        .info-content { background: rgba(30, 30, 30, 0.95); color: #eee; line-height: 1.35; padding: 16px; font-size: 12.5px; }
-        .info-content h3 { font-size: 15px; margin: 0 0 10px 0; border-bottom: 1px solid #444; padding-bottom: 5px; color: #fff; }
+        /* インフォメーションモーダル（極小・凝縮版） */
+        .modal-content { background: rgba(30, 30, 30, 0.95); width: 320px; max-height: 95vh; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; position: relative; border: 1px solid #444; color: #eee; }
+        .info-content { padding: 14px; font-size: 11px; line-height: 1.4; }
+        .info-content h3 { font-size: 14px; margin: 0 0 8px 0; border-bottom: 1px solid #444; padding-bottom: 4px; color: #fff; text-align: center; }
         .info-content a { color: #00fbff; text-decoration: none; font-weight: bold; }
         .info-content p { margin: 6px 0; }
         .info-content b { color: #fff; font-weight: bold; }
-        
-        .close-btn-round { background: #444; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; float: right; font-weight: bold; margin-top: -4px; }
+        .close-btn-round { background: transparent; color: #888; border: none; width: 24px; height: 24px; cursor: pointer; float: right; font-size: 18px; line-height: 1; transition: color 0.2s; }
+        .close-btn-round:hover { color: #fff; }
 
-        .modal-header { padding: 15px; background: #f8f9fa; font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; }
+        .modal-header { padding: 12px; background: #f8f9fa; font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; border-radius: 12px 12px 0 0; color: #333; font-size: 14px; }
         .close-modal { cursor: pointer; font-size: 20px; color: #666; }
+        .log-modal-content { background: white; width: 320px; border-radius: 12px; }
         
         .pop-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 10px; cursor: pointer; font-size: 14px; }
         .report-btn-red { background: #ff3b30 !important; color: white !important; }
@@ -65,27 +66,27 @@
 
 <div id="map"></div>
 
-<div id="log-modal"><div class="modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:15px; overflow-y:auto; max-height:50vh;"><div style="text-align:center; color:#999;">現在、報告はありません</div></div></div></div>
+<div id="log-modal"><div class="modal-content log-modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:10px; overflow-y:auto; max-height:50vh;"><div style="text-align:center; color:#999; font-size:12px;">現在、報告はありません</div></div></div></div>
 
 <div id="info-modal">
     <div class="modal-content info-content">
         <button class="close-btn-round" onclick="closeInfo()">✕</button>
         <h3>すなサポ について</h3>
-        <p>制作: <a href="https://github.com/sapporo-geolab" target="_blank">岡本 卓也</a></p>
-        <p>データ引用: <a href="https://data.pf-sapporo.jp/" target="_blank">DATA-SMART CITY SAPPORO</a></p>
         
-        <p style="margin-top:10px; font-weight:bold; color:#00fbff;">💡 つかいかた</p>
-        <p>・<b>砂切れを教える</b>: 砂箱をタップし報告ボタンを押す</p>
-        <p>・<b>状況を確認する</b>: 右上の砂箱アイコンからリストを表示</p>
-        <p>・<b>避難所を見る</b>: 右の避難所アイコンで光の柱を表示</p>
-        <p>・<b>現在地へ行く</b>: 右のターゲットマークで自位置へ</p>
+        <p>このアプリケーションは <a href="https://github.com/sapporo-geolab" target="_blank"><b>岡本 卓也</b></a> により作成されました。</p>
+        <p>本アプリケーションが利用する砂箱および避難所の位置情報データは、札幌市ICT活用プラットフォーム「<a href="https://data.pf-sapporo.jp/" target="_blank"><b>DATA-SMART CITY SAPPORO</b></a>」において公開されているオープンデータを利用しています。</p>
+        
+        <p style="margin-top:8px; font-weight:bold; color:#00fbff;">💡 つかいかた</p>
+        <p style="margin-bottom:2px;">・<b>砂切れを教える</b>: 地図上の砂箱をタップして「砂切れをみんなに教える」ボタンを押してください。</p>
+        <p style="margin-bottom:2px;">・<b>状況を確認する</b>: 右上の砂箱アイコンを押すと、現在報告されている砂切れリストを確認できます。</p>
+        <p style="margin-bottom:2px;">・<b>避難所を見る</b>: 右側の避難所アイコンを押すと、市内の避難所が光の柱とともに表示されます。</p>
+        <p style="margin-bottom:2px;">・<b>現在地へ行く</b>: 右側のターゲットマークを押すと、あなたの今いる場所へジャンプします。</p>
 
-        <p style="margin-top:10px; border-top:1px solid #444; padding-top:6px; font-size:11.5px; color:#bbb;">
-            ※砂箱データはH30時点のもので現況優先です。<br>
-            ※市や関連機関への直接の問い合わせはご遠慮ください。<br>
-            ※ソースは<a href="https://github.com/sapporo-geolab" target="_blank">GitHub</a>で公開中。
-        </p>
-        <p style="font-size: 11px; color: #888; text-align: center; margin-top: 8px;">©2026 Takuya Okamoto</p>
+        <p style="margin-top:8px;">砂箱データは平成30年時点のものであり、現地の状況と必ずしも一致しない場合があります。</p>
+        <p>本アプリケーションの表示内容やデータについて、札幌市および関連事業者への直接の問い合わせは行わないでください。</p>
+        <p>ソースコードは <a href="https://github.com/sapporo-geolab" target="_blank"><b>GitHub リポジトリ</b></a> にて公開されています。</p>
+        
+        <p style="font-size: 10px; color: #888; text-align: center; margin-top: 8px; border-top: 1px solid #444; padding-top: 4px;">©2026 Takuya Okamoto</p>
     </div>
 </div>
 
@@ -135,11 +136,7 @@
         const accuracy = pos.coords.accuracy;
         lastCoords = [lng, lat];
         userMarker.setLngLat(lastCoords);
-        if (!initialGPSLocked && accuracy < 80) { 
-            initialGPSLocked = true; 
-            document.getElementById('status-text').textContent = "現在地を取得！"; 
-            map.jumpTo({ center: lastCoords }); 
-        }
+        if (!initialGPSLocked && accuracy < 80) { initialGPSLocked = true; document.getElementById('status-text').textContent = "現在地を取得！"; map.jumpTo({ center: lastCoords }); }
         if (isTracking) map.setCenter(lastCoords);
     }, (err) => { initialGPSLocked = true; }, { enableHighAccuracy: true });
     function jumpToCurrentLocation() {
@@ -221,13 +218,7 @@
     
     function hideLoader() {
         const checkGPS = setInterval(() => {
-            if (initialGPSLocked) { 
-                clearInterval(checkGPS); 
-                setTimeout(() => { 
-                    document.getElementById('loader').style.opacity = '0'; 
-                    setTimeout(() => { document.getElementById('loader').style.visibility = 'hidden'; }, 1200); 
-                }, 800); 
-            }
+            if (initialGPSLocked) { clearInterval(checkGPS); setTimeout(() => { document.getElementById('loader').style.opacity = '0'; setTimeout(() => { document.getElementById('loader').style.visibility = 'hidden'; }, 1200); }, 800); }
         }, 500);
     }
     async function loadAndRunGraphics() {
@@ -295,11 +286,11 @@
     window.reportEmpty = function(id) { db.ref('reports/' + id).set({ time: Date.now(), timeLabel: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}) }); const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove(); };
     window.markAsDone = function(logIdx) { const id = reportLog[logIdx] ? reportLog[logIdx].id : logIdx; db.ref('reports/' + id).remove(); const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove(); };
     function updateLogPanel() {
-        const list = document.getElementById('log-list'); if (reportLog.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999;">現在、報告はありません</div>'; return; }
+        const list = document.getElementById('log-list'); if (reportLog.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999; font-size:12px;">現在、報告はありません</div>'; return; }
         list.innerHTML = reportLog.map((log, i) => `
-            <div style="border-bottom:1px solid #eee; padding:12px 0; display:flex; justify-content:space-between; align-items:center;">
-                <div onclick="closeLog(); map.flyTo({center:[${rawData[log.id]['経度（度）']}, ${rawData[log.id]['緯度（度）']}], zoom:18.5})" style="cursor:pointer;"><div style="color:#ff3b30; font-size:11px;">確認：${log.time}</div><div style="font-weight:bold; font-size:13px;">${log.address.replace('北海道札幌市', '')}</div></div>
-                <button onclick="markAsDone(${i})" style="background:#4cd964; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">補充されました</button>
+            <div style="border-bottom:1px solid #eee; padding:8px 0; display:flex; justify-content:space-between; align-items:center;">
+                <div onclick="closeLog(); map.flyTo({center:[${rawData[log.id]['経度（度）']}, ${rawData[log.id]['緯度（度）']}], zoom:18.5})" style="cursor:pointer;"><div style="color:#ff3b30; font-size:10px;">確認：${log.time}</div><div style="font-weight:bold; font-size:12px;">${log.address.replace('北海道札幌市', '')}</div></div>
+                <button onclick="markAsDone(${i})" style="background:#4cd964; color:white; border:none; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:bold; cursor:pointer;">補充済</button>
             </div>`).join('');
     }
     map.on('click', 'sunabako-click-area', (e) => {
