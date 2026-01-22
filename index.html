@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>Suna-Sapo: Official Edition</title>
+    <title>Suna-Sapo: Realtime Edition</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
@@ -14,19 +14,28 @@
     <style>
         html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
+        
         #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10001; transition: opacity 1.2s ease, visibility 1.2s; }
         #loader-logo-container { width: 240px; height: 240px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; }
         #loader-logo-img { max-width: 100%; max-height: 100%; box-shadow: none; object-fit: contain; opacity: 0; transition: opacity 0.8s ease; }
+        
         .dot-pulse { display: flex; align-items: center; justify-content: center; }
         .dot-pulse div { width: 14px; height: 14px; margin: 0 10px; background-color: #00fbff; border-radius: 50%; animation: dot-pulse 1.4s infinite ease-in-out both; }
         @keyframes dot-pulse { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1.2); opacity: 1; } }
+
         .info-panel { position: absolute; top: 15px; left: 15px; z-index: 1000; color: white; font-family: sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }
         #time-display { font-size: 24px; font-weight: bold; }
+        
         .mt-controls { position: absolute; top: 15px; right: 15px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
         .mt-btn { width: 44px; height: 44px; background: white; border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; background-repeat: no-repeat; background-position: center; }
+        
         .log-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png'); background-size: 40px; }
         .shelter-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png'); background-size: 32px; background-color: white; transition: background-color 0.3s; }
         .active-shelter { background-color: #4cd964 !important; }
+
+        /* Mapbox標準の現在地ボタンは隠して、自前のボタンで制御します */
+        .mapboxgl-ctrl-geolocate { display: none !important; }
+
         #log-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
         .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 70vh; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; }
         .modal-header { padding: 18px; background: #f8f9fa; font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; }
@@ -35,6 +44,7 @@
         .report-btn-red { background: #ff3b30 !important; color: white !important; }
         .report-btn-disabled { background: #cccccc; color: #ffffff; cursor: not-allowed; }
         .done-btn-green { background: #4cd964; color: white; }
+        
         #snow-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
         .shelter-beam-container { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
         .shelter-beam { width: 4px; height: 180px; background: linear-gradient(to top, rgba(76, 217, 100, 0.9), rgba(76, 217, 100, 0)); box-shadow: 0 0 12px rgba(76, 217, 100, 0.8); transform-origin: bottom; position: absolute; bottom: 0px; animation: beam-flicker 2s infinite alternate ease-in-out; }
@@ -55,17 +65,18 @@
 
 <div id="log-modal"><div class="modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:15px; overflow-y:auto; max-height:55vh;"><div style="text-align:center; color:#999;">現在、報告はありません</div></div></div></div>
 <canvas id="snow-canvas"></canvas>
+
 <div class="info-panel"><div id="date-display">----年--月--日(-)</div><div id="time-display">00:00:00</div></div>
+
 <div class="mt-controls">
     <button class="mt-btn log-toggle-btn" onclick="openLog()"></button>
     <button id="shelter-btn" class="mt-btn shelter-toggle-btn" onclick="toggleShelters()"></button>
-    <button class="mt-btn" onclick="jumpToTarget()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06z"/></svg></button>
+    <button class="mt-btn" onclick="jumpToCurrentLocation()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06z"/></svg></button>
     <button class="mt-btn" onclick="map.zoomIn()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
     <button class="mt-btn" onclick="map.zoomOut()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M19 13H5v-2h14v2z"/></svg></button>
 </div>
 
 <script>
-    // --- Firebase設定 ---
     const firebaseConfig = {
       apiKey: "AIzaSyCiSrqwXpRYYYfjkhtLo2lePrN1rjPaPiY",
       authDomain: "suna-sapo-3d.firebaseapp.com",
@@ -85,7 +96,28 @@
     let sheltersVisible = false;
 
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
-    const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/mapbox/standard', center: [141.3508, 43.0645], zoom: 17, pitch: 65, bearing: -10, attributionControl: false });
+    const map = new mapboxgl.Map({ 
+        container: 'map', 
+        style: 'mapbox://styles/mapbox/standard', 
+        center: [141.3508, 43.0645], 
+        zoom: 17, pitch: 65, bearing: -10, 
+        attributionControl: false 
+    });
+
+    // --- 現在地表示用コントロールの設定 ---
+    const geolocate = new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true }, // 高精度に
+        trackUserLocation: true, // 自分が動いたら青い点も動く
+        showUserHeading: true // スマホで向いている方向を表示
+    });
+    map.addControl(geolocate);
+
+    // 自前ボタンが押された時の動作
+    function jumpToCurrentLocation() {
+        // Mapbox標準の現在地取得機能を実行する
+        const geoBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
+        if (geoBtn) geoBtn.click();
+    }
 
     function openLog() { document.getElementById('log-modal').style.display = 'flex'; }
     function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
@@ -229,7 +261,6 @@
         }
     });
 
-    function jumpToTarget() { map.flyTo({ center: [141.3505, 43.0666], zoom: 19, pitch: 70, speed: 0.8 }); }
 </script>
 </body>
 </html>
