@@ -7,35 +7,18 @@
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
     <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <style>
         html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
         #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
-        
-        /* ローディング画面 */
-        #loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #ffffff; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 10001;
-            transition: opacity 1.2s ease, visibility 1.2s;
-        }
-        #loader-logo-container {
-            width: 240px; height: 240px; margin-bottom: 20px;
-            display: flex; justify-content: center; align-items: center;
-        }
-        #loader-logo-img {
-            max-width: 100%; max-height: 100%;
-            box-shadow: none; object-fit: contain;
-            opacity: 0; transition: opacity 0.8s ease;
-        }
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 10001; transition: opacity 1.2s ease, visibility 1.2s; }
+        #loader-logo-container { width: 240px; height: 240px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; }
+        #loader-logo-img { max-width: 100%; max-height: 100%; box-shadow: none; object-fit: contain; opacity: 0; transition: opacity 0.8s ease; }
         .dot-pulse { display: flex; align-items: center; justify-content: center; }
         .dot-pulse div { width: 14px; height: 14px; margin: 0 10px; background-color: #00fbff; border-radius: 50%; animation: dot-pulse 1.4s infinite ease-in-out both; }
         @keyframes dot-pulse { 0%, 80%, 100% { transform: scale(0); opacity: 0.3; } 40% { transform: scale(1.2); opacity: 1; } }
-
-        /* UIパーツ */
         .info-panel { position: absolute; top: 15px; left: 15px; z-index: 1000; color: white; font-family: sans-serif; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }
         #time-display { font-size: 24px; font-weight: bold; }
         .mt-controls { position: absolute; top: 15px; right: 15px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
@@ -43,10 +26,7 @@
         .log-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png'); background-size: 40px; }
         .shelter-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png'); background-size: 32px; background-color: white; transition: background-color 0.3s; }
         .active-shelter { background-color: #4cd964 !important; }
-
-        /* Mapbox標準の現在地ボタンは自前ボタンで制御するため隠す */
         .mapboxgl-ctrl-geolocate { display: none !important; }
-
         #log-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
         .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 70vh; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; }
         .modal-header { padding: 18px; background: #f8f9fa; font-weight: bold; display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; }
@@ -85,7 +65,6 @@
 </div>
 
 <script>
-    // --- Firebase設定 ---
     const firebaseConfig = {
       apiKey: "AIzaSyCiSrqwXpRYYYfjkhtLo2lePrN1rjPaPiY",
       authDomain: "suna-sapo-3d.firebaseapp.com",
@@ -103,47 +82,65 @@
     let reportLog = [];
     let shelterMarkers = [];
     let sheltersVisible = false;
+    let isTracking = false; // 追跡中フラグ
 
-    // --- マップ設定 ---
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
     const map = new mapboxgl.Map({ 
         container: 'map', 
         style: 'mapbox://styles/mapbox/standard', 
         center: [141.3508, 43.0645], 
-        zoom: 17, 
-        pitch: 65, 
-        bearing: -10, 
-        attributionControl: false 
+        zoom: 17, pitch: 65, bearing: -10, attributionControl: false 
     });
 
-    // --- 現在地表示用コントロールの設定 ---
     const geolocate = new mapboxgl.GeolocateControl({
         positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true,   // 追跡モードを有効化
-        showUserHeading: true,     // スマホの向いている方向を表示
-        showUserLocation: true
+        trackUserLocation: true,
+        showUserHeading: true
     });
     map.addControl(geolocate);
 
-    // 追跡中にカメラ角度(Pitch)が勝手に戻らないように固定
-    geolocate.on('geolocate', () => {
-        map.setPitch(65);
-    });
-
-    // 現在地ボタンが押された時の動作
-    function jumpToCurrentLocation() {
-        const geoBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
-        if (geoBtn) {
-            geoBtn.click();
-            setTimeout(() => {
-                map.easeTo({
-                    zoom: 18.5,
-                    pitch: 65,
-                    duration: 1000
-                });
-            }, 500);
+    // 【重要】コンパス情報を取得して地図を回転させる関数
+    function handleOrientation(event) {
+        if (!isTracking) return;
+        
+        // iOS/Androidで方位の取得方法が異なるための処理
+        let heading = event.webkitCompassHeading || (360 - event.alpha);
+        
+        if (heading) {
+            map.easeTo({
+                bearing: -heading, // 進行方向を上にする
+                pitch: 65,         // 3D角度を維持
+                duration: 100,     // 反応を速くする
+                easing: (t) => t   // リニアな動き
+            });
         }
     }
+
+    function jumpToCurrentLocation() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            DeviceOrientationEvent.requestPermission().then(response => {
+                if (response === 'granted') {
+                    startTracking();
+                }
+            }).catch(console.error);
+        } else {
+            startTracking();
+        }
+    }
+
+    function startTracking() {
+        isTracking = true;
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        const geoBtn = document.querySelector('.mapboxgl-ctrl-geolocate');
+        if (geoBtn) geoBtn.click();
+        
+        setTimeout(() => {
+            map.easeTo({ zoom: 18.5, pitch: 65, duration: 1000 });
+        }, 500);
+    }
+
+    // 画面をドラッグしたら追跡を弱める（任意）
+    map.on('dragstart', () => { isTracking = false; window.removeEventListener('deviceorientation', handleOrientation); });
 
     function openLog() { document.getElementById('log-modal').style.display = 'flex'; }
     function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
@@ -197,22 +194,13 @@
             download: true, header: true, skipEmptyLines: true,
             complete: async function(results) {
                 rawData = results.data;
-                
                 db.ref('reports').on('value', (snapshot) => {
                     const reports = snapshot.val() || {};
-                    rawData.forEach((item, idx) => {
-                        item.isGray = !!reports[idx];
-                    });
-                    reportLog = Object.keys(reports).map(id => ({
-                        id: id,
-                        address: rawData[id]['住所'],
-                        time: reports[id].timeLabel
-                    })).reverse();
-                    
+                    rawData.forEach((item, idx) => { item.isGray = !!reports[idx]; });
+                    reportLog = Object.keys(reports).map(id => ({ id: id, address: rawData[id]['住所'], time: reports[id].timeLabel })).reverse();
                     updateLogPanel();
                     loadAndRunGraphics(); 
                 });
-
                 map.addSource('sunabako-source', { 'type': 'geojson', 'data': sandboxData });
                 map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 12, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
@@ -257,10 +245,7 @@
     }
 
     window.reportEmpty = function(id) {
-        db.ref('reports/' + id).set({
-            time: Date.now(),
-            timeLabel: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'})
-        });
+        db.ref('reports/' + id).set({ time: Date.now(), timeLabel: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}) });
         const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove(); 
     };
 
