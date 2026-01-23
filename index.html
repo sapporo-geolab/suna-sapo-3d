@@ -24,7 +24,7 @@
         .mt-btn { width: 44px; height: 44px; background: white; border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; background-repeat: no-repeat; background-position: center; }
         .log-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png'); background-size: 40px; }
         
-        /* Yahoo風 投稿ボタン設定 (位置を少し下げて凡例との間隔を確保) */
+        /* Yahoo風 投稿ボタン設定 (下位置を75pxに固定) */
         .road-report-btn-yahoo {
             position: absolute;
             bottom: 75px;
@@ -47,10 +47,10 @@
         }
         .road-report-btn-yahoo:active { transform: scale(0.95); }
 
-        /* 路面状況 凡例パネル (投稿ボタンとの重なりを防ぐ) */
+        /* 路面状況 凡例パネル (ボタンとの距離を離すためbottomを上げる) */
         #road-legend {
             position: absolute;
-            bottom: 125px;
+            bottom: 145px;
             left: 15px;
             z-index: 1000;
             background: rgba(40, 40, 40, 0.85);
