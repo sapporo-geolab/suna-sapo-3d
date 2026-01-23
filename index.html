@@ -24,7 +24,6 @@
         .mt-btn { width: 44px; height: 44px; background: white; border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; background-repeat: no-repeat; background-position: center; }
         .log-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png'); background-size: 40px; }
         
-        /* Yahoo風 投稿ボタン設定 (下位置を75pxに固定) */
         .road-report-btn-yahoo {
             position: absolute;
             bottom: 75px;
@@ -47,7 +46,6 @@
         }
         .road-report-btn-yahoo:active { transform: scale(0.95); }
 
-        /* 路面状況 凡例パネル (ボタンとの距離を離すためbottomを上げる) */
         #road-legend {
             position: absolute;
             bottom: 145px;
@@ -68,7 +66,6 @@
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
-        /* 地図上のアイコン用スタイル */
         .road-icon {
             width: 32px;
             height: 32px;
@@ -80,7 +77,6 @@
         }
         .road-icon-comment { border: 3px solid white; width: 36px; height: 36px; }
 
-        /* レイヤー選択パネル (Mini Tokyo 3D Style) */
         #layer-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 25000;
@@ -116,7 +112,8 @@
         
         .pop-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 10px; cursor: pointer; font-size: 14px; }
         .report-btn-red { background: #ff3b30 !important; color: white !important; }
-        .report-btn-disabled { background: #cccccc; color: #ffffff; cursor: not-allowed; }
+        .spread-btn-blue { background: #007cff !important; color: white !important; }
+        .report-btn-disabled { background: #cccccc !important; color: #ffffff !important; cursor: not-allowed; }
         .done-btn-green { background: #4cd964; color: white; }
         
         #snow-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
@@ -303,6 +300,13 @@
         document.getElementById('road-comment').value = "";
     }
 
+    // 砂をまく処理
+    window.spreadSand = function(id) {
+        alert("砂をまいてくれてありがとう！あなたに幸運が訪れますように");
+        const popup = document.querySelector('.mapboxgl-popup');
+        if (popup) popup.remove();
+    };
+
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
@@ -466,7 +470,21 @@
         const p = e.features[0].properties;
         if (p.id !== undefined) {
             const isGray = rawData[p.id].isGray;
-            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`<div style="font-family: sans-serif; width: 220px; color: #333;"><img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;"><p style="margin: 10px 0 5px; font-size:14px;"><strong>${rawData[p.id]['住所']}</strong></p>${isGray ? `<div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div><button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button><button class="pop-btn done-btn-green" onclick="markAsDone(${p.id})">補充されました！</button>` : `<button class="pop-btn pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>`}</div>`).addTo(map);
+            const cleanAddr = rawData[p.id]['住所'].replace('北海道札幌市', '');
+            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`
+                <div style="font-family: sans-serif; width: 220px; color: #333;">
+                    <img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;">
+                    <p style="margin: 10px 0 5px; font-size:14px;"><strong>${cleanAddr}</strong></p>
+                    ${isGray ? `
+                        <div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div>
+                        <button class="pop-btn report-btn-disabled" disabled>砂をまきました！</button>
+                        <button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button>
+                        <button class="pop-btn done-btn-green" onclick="markAsDone(${p.id})">補充されました！</button>
+                    ` : `
+                        <button class="pop-btn spread-btn-blue" onclick="spreadSand(${p.id})">砂をまきました！</button>
+                        <button class="pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>
+                    `}
+                </div>`).addTo(map);
         }
     });
     map.on('mouseenter', 'sunabako-click-area', () => { map.getCanvas().style.cursor = 'pointer'; });
