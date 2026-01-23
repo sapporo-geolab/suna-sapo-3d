@@ -23,6 +23,7 @@
         .mt-controls { position: absolute; top: 15px; right: 15px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
         .mt-btn { width: 44px; height: 44px; background: white; border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; background-repeat: no-repeat; background-position: center; }
         .log-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png'); background-size: 40px; }
+        
         .road-report-btn-yahoo { position: absolute; bottom: 75px; left: 15px; z-index: 1000; background: white; color: #1e88e5; border: none; padding: 10px 20px; border-radius: 24px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: sans-serif; transition: transform 0.1s; }
         .road-report-btn-yahoo:active { transform: scale(0.95); }
         #road-legend { position: absolute; bottom: 145px; left: 15px; z-index: 1000; background: rgba(40, 40, 40, 0.85); padding: 8px 12px; border-radius: 10px; color: white; font-family: sans-serif; font-size: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
@@ -57,7 +58,6 @@
         #snow-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
         .shelter-beam-container { display: flex; flex-direction: column; align-items: center; pointer-events: none; }
         .shelter-beam { width: 4px; height: 180px; background: linear-gradient(to top, rgba(76, 217, 100, 0.9), rgba(76, 217, 100, 0)); box-shadow: 0 0 12px rgba(76, 217, 100, 0.8); transform-origin: bottom; position: absolute; bottom: 0px; animation: beam-flicker 2s infinite alternate ease-in-out; }
-        @keyframes beam-flicker { from { opacity: 0.6; transform: scaleY(1); } to { opacity: 1; transform: scaleY(1.3); } }
         .shelter-logo-icon { width: 52px; height: 52px; margin-bottom: 180px; background-size: contain; background-repeat: no-repeat; background-position: center; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.9)); pointer-events: auto; cursor: pointer; }
     </style>
 </head>
@@ -120,7 +120,6 @@
         <p style="margin-top:15px; font-weight:bold;">💡 つかいかた</p>
         <p style="margin-left:5px; margin-bottom:4px;">・<b>砂をまく</b>: 砂箱を選んで「砂をまきました！」を押すと足元に星が積もります。</p>
         <p style="margin-left:5px; margin-bottom:4px;">・<b>砂切れを教える</b>: 砂箱を選んで「砂切れをみんなに教える」ボタンを押してください。</p>
-        <p style="margin-left:5px; margin-bottom:4px;">・<b>路面状況を投稿する</b>: 左下の「投稿する」ボタンから状況を共有できます。</p>
         <p style="font-size: 11px; color: #888; text-align: center; margin-top: 15px;">©2026 Takuya Okamoto</p>
     </div>
 </div>
@@ -151,15 +150,8 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let rawData = [];
-    let reportLog = [];
-    let sandboxData = { type: 'FeatureCollection', features: [] };
-    let shelterMarkers = [];
-    let roadMarkers = [];
-    let sheltersVisible = false;
-    let initialGPSLocked = false;
-    let lastCoords = null;
-    let isTracking = false;
+    let rawData = [], reportLog = [], sandboxData = { type: 'FeatureCollection', features: [] };
+    let shelterMarkers = [], roadMarkers = [], sheltersVisible = false, initialGPSLocked = false, lastCoords = null, isTracking = false;
 
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
     const map = new mapboxgl.Map({ container: 'map', style: 'mapbox://styles/mapbox/standard', center: [141.3508, 43.0645], zoom: 17, pitch: 65, bearing: -10, attributionControl: false });
@@ -199,7 +191,6 @@
         db.ref('sand_spread/' + id).push({ timestamp: Date.now() });
         alert("砂をまいてくれてありがとう！あなたに幸運が訪れますように");
         const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove();
-        // アニメーション用フラグ
         window.activeAnimationId = id; setTimeout(() => { window.activeAnimationId = null; }, 3000);
     };
 
@@ -237,9 +228,9 @@
     }
 
     map.on('load', () => {
-        // 星レイヤーの初期化 (砂箱とは完全に別)
+        // 星レイヤー (独立レイヤーとして作成)
         map.addSource('stars-source', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-        map.addLayer({ id: 'stars-layer', type: 'circle', source: 'stars-source', paint: { 'circle-radius': 3, 'circle-color': '#FFD700', 'circle-blur': 0.8, 'circle-opacity': 0.7 } });
+        map.addLayer({ id: 'stars-layer', type: 'circle', source: 'stars-source', paint: { 'circle-radius': 3.5, 'circle-color': '#FFD700', 'circle-blur': 0.6, 'circle-opacity': 0.8 } });
 
         const csvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ca0f9f45e8a5e2064678f14eb8e7e933/raw/33abeeab3374bc93c97d208c90056b7355c04802/h301.csv';
         Papa.parse(csvUrl, { download: true, header: true, complete: function(results) {
@@ -255,8 +246,8 @@
                 Object.keys(data).forEach(id => {
                     const spreads = Object.values(data[id]).filter(v => now - v.timestamp < 6 * 60 * 60 * 1000);
                     if (spreads.length > 0 && rawData[id]) {
-                        for(let i=0; i<Math.min(spreads.length, 10); i++) {
-                            starFeatures.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [parseFloat(rawData[id]['経度（度）']) + (Math.random()-0.5)*0.0001, parseFloat(rawData[id]['緯度（度）']) + (Math.random()-0.5)*0.0001] } });
+                        for(let i=0; i<Math.min(spreads.length, 12); i++) {
+                            starFeatures.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [parseFloat(rawData[id]['経度（度）']) + (Math.random()-0.5)*0.00012, parseFloat(rawData[id]['緯度（度）']) + (Math.random()-0.5)*0.00012] } });
                         }
                     }
                 });
