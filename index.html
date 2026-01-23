@@ -24,7 +24,6 @@
         .mt-btn { width: 44px; height: 44px; background: white; border: none; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; background-repeat: no-repeat; background-position: center; }
         .log-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png'); background-size: 40px; }
         
-        /* Yahoo風 投稿ボタン設定 (下位置を75pxに固定) */
         .road-report-btn-yahoo {
             position: absolute;
             bottom: 75px;
@@ -47,7 +46,6 @@
         }
         .road-report-btn-yahoo:active { transform: scale(0.95); }
 
-        /* 路面状況 凡例パネル (ボタンとの距離を離すためbottomを上げる) */
         #road-legend {
             position: absolute;
             bottom: 145px;
@@ -68,7 +66,6 @@
         .legend-item { display: flex; align-items: center; gap: 6px; }
         .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
-        /* 地図上のアイコン用スタイル */
         .road-icon {
             width: 32px;
             height: 32px;
@@ -80,7 +77,6 @@
         }
         .road-icon-comment { border: 3px solid white; width: 36px; height: 36px; }
 
-        /* レイヤー選択パネル (Mini Tokyo 3D Style) */
         #layer-modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 25000;
@@ -116,7 +112,8 @@
         
         .pop-btn { border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 10px; cursor: pointer; font-size: 14px; }
         .report-btn-red { background: #ff3b30 !important; color: white !important; }
-        .report-btn-disabled { background: #cccccc; color: #ffffff; cursor: not-allowed; }
+        .spread-btn-blue { background: #007cff !important; color: white !important; }
+        .report-btn-disabled { background: #cccccc !important; color: #ffffff !important; cursor: not-allowed; }
         .done-btn-green { background: #4cd964; color: white; }
         
         #snow-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
@@ -228,6 +225,7 @@
     let sandboxData = { type: 'FeatureCollection', features: [] };
     let shelterMarkers = [];
     let roadMarkers = [];
+    let spreadStars = {}; 
     let sheltersVisible = false;
     let isTracking = false; 
     let initialGPSLocked = false;
@@ -267,7 +265,6 @@
     function openInfo() { document.getElementById('info-modal').style.display = 'flex'; }
     function closeInfo() { document.getElementById('info-modal').style.display = 'none'; }
 
-    // レイヤー関連
     function openLayer() { document.getElementById('layer-modal').style.display = 'flex'; }
     function closeLayer() { document.getElementById('layer-modal').style.display = 'none'; }
     function toggleLayer(type) {
@@ -278,7 +275,6 @@
         }
     }
 
-    // 路面投稿関連
     function openRoadReport() {
         if (!lastCoords) { alert("現在地を取得できませんでした。"); return; }
         const lon = lastCoords[0]; const lat = lastCoords[1];
@@ -293,47 +289,61 @@
         const comment = document.getElementById('road-comment').value;
         const offsetLng = (Math.random() - 0.5) * 0.0001;
         const offsetLat = (Math.random() - 0.5) * 0.0001;
-        
-        db.ref('road_reports').push({
-            lat: lastCoords[1] + offsetLat, lng: lastCoords[0] + offsetLng,
-            level: level, comment: comment, timestamp: Date.now()
-        });
+        db.ref('road_reports').push({ lat: lastCoords[1] + offsetLat, lng: lastCoords[0] + offsetLng, level: level, comment: comment, timestamp: Date.now() });
         alert("みんなに役立つ情報をありがとう！");
         closeRoadReport();
         document.getElementById('road-comment').value = "";
     }
+
+    // 砂をまく処理
+    window.spreadSand = function(id) {
+        db.ref('sand_spread/' + id).push({ timestamp: Date.now() });
+        alert("砂をまいてくれてありがとう！あなたに幸運が訪れますように");
+        const popup = document.querySelector('.mapboxgl-popup');
+        if (popup) popup.remove();
+        // アニメーション用トリガー(1をセットして描画側に通知)
+        window.activeAnimationId = id;
+        setTimeout(() => { window.activeAnimationId = null; }, 3000);
+    };
 
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
     let particles = [];
     function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
     window.addEventListener('resize', resize); resize();
+    
     function updateSnow() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const pitch = map.getPitch(); 
         const is3D = pitch > 25;
-        if (particles.length < 160) {
-            particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 0.5, o: Math.random() * 0.4 + 0.2, vx: (Math.random() - 0.5) * 0.8, vy: Math.random() * 1.2 + 0.8 });
+
+        // 星噴き出しアニメーション (activeAnimationIdがある時)
+        if (window.activeAnimationId !== null && rawData[window.activeAnimationId]) {
+            const pos = map.project([parseFloat(rawData[window.activeAnimationId]['経度（度）']), parseFloat(rawData[window.activeAnimationId]['緯度（度）'])]);
+            for(let i=0; i<5; i++){
+                particles.push({ x: pos.x, y: pos.y, r: 3, o: 1, vx: (Math.random()-0.5)*4, vy: -Math.random()*5-2, type: 'star', color: '#FFD700' });
+            }
         }
-        for (let i = 0; i < particles.length; i++) {
+
+        if (particles.length < 200) {
+            particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 0.5, o: Math.random() * 0.4 + 0.2, vx: (Math.random() - 0.5) * 0.8, vy: Math.random() * 1.2 + 0.8, type: 'snow', color: '#FFF' });
+        }
+        for (let i = particles.length - 1; i >= 0; i--) {
             let p = particles[i];
-            let fadeOut = 1;
-            if (p.y > canvas.height * 0.8) fadeOut = 1 - (p.y - canvas.height * 0.8) / (canvas.height * 0.2);
             ctx.beginPath();
-            ctx.fillStyle = `rgba(255, 255, 255, ${p.o * fadeOut})`;
-            if (!is3D) {
-                const scale = 1 - (p.y / canvas.height) * 0.5;
-                ctx.arc(p.x, p.y, p.r * scale, 0, Math.PI * 2);
-                p.y += p.vy;
+            ctx.fillStyle = p.type === 'star' ? `rgba(255, 215, 0, ${p.o})` : `rgba(255, 255, 255, ${p.o})`;
+            
+            if (p.type === 'star') {
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                p.x += p.vx; p.y += p.vy; p.o -= 0.01;
+                if (p.o <= 0) particles.splice(i, 1);
             } else {
                 const perspective = (p.y / canvas.height);
-                const speed = p.vy * (1 + perspective * 1.2);
-                const xShift = (p.x - canvas.width / 2) * (perspective * 0.06);
-                let displayRadius = Math.min(p.r * (1 + perspective * 1.5), 4);
-                ctx.arc(p.x + xShift, p.y, displayRadius, 0, Math.PI * 2);
-                p.y += speed; p.x += p.vx + xShift * 0.01;
+                const xShift = is3D ? (p.x - canvas.width / 2) * (perspective * 0.06) : 0;
+                ctx.arc(p.x + xShift, p.y, p.r * (1 + perspective), 0, Math.PI * 2);
+                p.y += p.vy * (1 + perspective);
+                if (p.y > canvas.height) { p.y = -20; p.x = Math.random() * canvas.width; }
             }
-            if (p.y > canvas.height || p.x < -50 || p.x > canvas.width + 50 || fadeOut <= 0) { p.y = -20; p.x = Math.random() * canvas.width; }
             ctx.fill();
         }
         requestAnimationFrame(updateSnow);
@@ -342,15 +352,10 @@
     function applyGlowingEffect() {
         if (!map.isStyleLoaded()) return;
         const now = new Date();
-        const hour = now.getHours();
-        const min = now.getMinutes();
-        const currentTime = hour + min / 60;
+        const currentTime = now.getHours() + now.getMinutes() / 60;
         let preset = (currentTime >= 6 && currentTime < 15) ? 'day' : (currentTime >= 15 && currentTime < 16.5) ? 'dusk' : 'night';
         map.setConfigProperty('basemap', 'lightPreset', preset);
         map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
-        if (map.getLayer('sunabako-layer')) {
-            map.setPaintProperty('sunabako-layer', 'fill-extrusion-emissive-strength', (preset === 'dusk' || preset === 'night') ? 0.8 : 0);
-        }
     }
     
     function hideLoader() {
@@ -363,9 +368,24 @@
         const gistUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ef76bf0034584f3c6ee30d7489f7f427/raw/graphics.js?t=' + Date.now();
         try {
             const response = await fetch(gistUrl);
-            const scriptContent = await response.text();
-            const drawFunc = new Function('map', 'rawData', 'sandboxData', scriptContent + '\nupdateSandboxGraphics(map, rawData, sandboxData);');
-            drawFunc(map, rawData, sandboxData);
+            let scriptContent = await response.text();
+            // 星の描画ロジックを注入
+            const starInject = `
+                Object.keys(window.spreadStars || {}).forEach(id => {
+                    const count = window.spreadStars[id];
+                    const row = rawData[id];
+                    if(!row) return;
+                    const lat = parseFloat(row['緯度（度）']), lon = parseFloat(row['経度（度）']);
+                    const aspect = 1.0 / Math.cos(lat * Math.PI / 180);
+                    for(let s=0; s<Math.min(count, 20); s++){
+                        const ang = (s * 137.5) * Math.PI / 180;
+                        const r = 0.000004 * Math.sqrt(s) * scale;
+                        newFeatures.push({ 'type': 'Feature', 'properties': { 'part': 'star_pixel', 'color': '#FFD700', 'height': 0.2*scale, 'base': 0 }, 'geometry': { 'type': 'Point', 'coordinates': [lon + r * Math.cos(ang) * aspect, lat + r * Math.sin(ang)] } });
+                    }
+                });
+            `;
+            const drawFunc = new Function('map', 'rawData', 'sandboxData', 'scale', scriptContent.replace('geojsonObj.features = newFeatures;', starInject + 'geojsonObj.features = newFeatures;'));
+            drawFunc(map, rawData, sandboxData, map.getZoom() < 16 ? 4.0 : 1.5);
             if (map.getSource('sunabako-source')) { map.getSource('sunabako-source').setData(sandboxData); }
             applyGlowingEffect();
             hideLoader();
@@ -378,6 +398,7 @@
             download: true, header: true, skipEmptyLines: true,
             complete: async function(results) {
                 rawData = results.data;
+                // 砂切れ報告同期
                 db.ref('reports').on('value', (snapshot) => {
                     const reports = snapshot.val() || {};
                     rawData.forEach((item, idx) => { item.isGray = !!reports[idx]; });
@@ -385,7 +406,18 @@
                     updateLogPanel(); 
                     loadAndRunGraphics(); 
                 });
-
+                // 徳積み(星)同期
+                db.ref('sand_spread').on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    const now = Date.now();
+                    window.spreadStars = {};
+                    Object.keys(data).forEach(id => {
+                        const validspreads = Object.values(data[id]).filter(v => now - v.timestamp < 6 * 60 * 60 * 1000);
+                        if(validspreads.length > 0) window.spreadStars[id] = validspreads.length;
+                    });
+                    loadAndRunGraphics();
+                });
+                // 路面投稿同期
                 db.ref('road_reports').on('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     roadMarkers.forEach(m => m.remove());
@@ -393,22 +425,14 @@
                     const now = Date.now();
                     Object.values(data).forEach(report => {
                         if (now - report.timestamp < 6 * 60 * 60 * 1000) {
-                            let iconUrl = "";
-                            if (report.level === '3') iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level3.jpg";
-                            else if (report.level === '2') iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level2.jpg";
-                            else iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level1.jpg";
-
+                            let iconUrl = report.level === '3' ? "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level3.jpg" : (report.level === '2' ? "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level2.jpg" : "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level1.jpg");
                             const el = document.createElement('div');
                             el.className = 'road-icon';
                             if (report.comment) el.classList.add('road-icon-comment');
                             el.style.backgroundImage = `url('${iconUrl}')`;
-
                             const marker = new mapboxgl.Marker(el).setLngLat([report.lng, report.lat]);
-                            if (report.comment) {
-                                marker.setPopup(new mapboxgl.Popup({offset:15}).setHTML(`<div style="color:#333;font-size:12px;padding:5px;">${report.comment}</div>`));
-                            }
-                            marker.addTo(map);
-                            roadMarkers.push(marker);
+                            if (report.comment) marker.setPopup(new mapboxgl.Popup({offset:15}).setHTML(`<div style="color:#333;font-size:12px;padding:5px;">${report.comment}</div>`));
+                            marker.addTo(map); roadMarkers.push(marker);
                         }
                     });
                 });
@@ -466,7 +490,21 @@
         const p = e.features[0].properties;
         if (p.id !== undefined) {
             const isGray = rawData[p.id].isGray;
-            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`<div style="font-family: sans-serif; width: 220px; color: #333;"><img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;"><p style="margin: 10px 0 5px; font-size:14px;"><strong>${rawData[p.id]['住所']}</strong></p>${isGray ? `<div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div><button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button><button class="pop-btn done-btn-green" onclick="markAsDone(${p.id})">補充されました！</button>` : `<button class="pop-btn pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>`}</div>`).addTo(map);
+            const cleanAddr = rawData[p.id]['住所'].replace('北海道札幌市', '');
+            new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`
+                <div style="font-family: sans-serif; width: 220px; color: #333;">
+                    <img src="https://raw.githubusercontent.com/sapporo-geolab/suna-img/main/suna.jpg" style="width:100%; border-radius:8px;">
+                    <p style="margin: 10px 0 5px; font-size:14px;"><strong>${cleanAddr}</strong></p>
+                    ${isGray ? `
+                        <div style="color: #ff3b30; font-size: 11px; font-weight: bold; margin-bottom: 5px;">現在、砂切れ報告が出ています</div>
+                        <button class="pop-btn report-btn-disabled" disabled>砂をまきました！</button>
+                        <button class="pop-btn report-btn-disabled" disabled>砂切れをみんなに教える</button>
+                        <button class="pop-btn done-btn-green" onclick="markAsDone(${p.id})">補充されました！</button>
+                    ` : `
+                        <button class="pop-btn spread-btn-blue" onclick="spreadSand(${p.id})">砂をまきました！</button>
+                        <button class="pop-btn report-btn-red" onclick="reportEmpty(${p.id})">砂切れをみんなに教える</button>
+                    `}
+                </div>`).addTo(map);
         }
     });
     map.on('mouseenter', 'sunabako-click-area', () => { map.getCanvas().style.cursor = 'pointer'; });
