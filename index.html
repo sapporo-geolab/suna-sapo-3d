@@ -26,16 +26,16 @@
         .shelter-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png'); background-size: 32px; background-color: white; transition: background-color 0.3s; }
         .active-shelter { background-color: #4cd964 !important; }
         
-        /* Yahoo天気風 投稿ボタン設定 */
+        /* Yahoo天気風 投稿ボタン設定（位置をボトムから90pxに調整） */
         .road-report-btn-yahoo {
             position: absolute;
-            bottom: 30px;
+            bottom: 90px;
             left: 15px;
             z-index: 1000;
             background: white;
             color: #1e88e5;
             border: none;
-            padding: 8px 18px;
+            padding: 10px 20px;
             border-radius: 24px;
             font-weight: bold;
             font-size: 14px;
@@ -43,7 +43,7 @@
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             font-family: sans-serif;
             transition: transform 0.1s;
         }
@@ -89,7 +89,7 @@
 <div id="map"></div>
 
 <button class="road-report-btn-yahoo" onclick="openRoadReport()">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 15h2v2h-2v-2zm0-4h2v2h-2v-2zm2 8h-2v2c1.1 0 2-.9 2-2zM13 3h2v2h-2V3zm8 4h2v2h-2V7zm0-4c1.1 0 2 .9 2 2h-2V3zM1 7h2v2H1V7zm16-4h2v2h-2V3zm-8 0h2v2H9V3zm-4 0h2v2H5V3zM1 11h2v2H1v-2zm8 10H7v-2h2v2zm-4 0c-1.1 0-2-.9-2-2h2v2zm0-4H1v-2h2v2zm0-4H1V7h2v6zm10 8h-2v-2h2v2zm4 0h-2v-2h2v2zM1 3c0-1.1.9-2 2-2v2H1zm0 18c0 1.1.9 2 2 2v-2H1zm18 2v-2h2c0 1.1-.9 2-2 2zm-6-2h-2v2h2v-2zm-8 2h-2v-2h2v2zm4 0h-2v-2h2v2z"/></svg>
+    <span style="font-size: 18px;">💬</span>
     投稿する
 </button>
 
