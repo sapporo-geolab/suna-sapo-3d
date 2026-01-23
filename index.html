@@ -26,7 +26,7 @@
         .shelter-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png'); background-size: 32px; background-color: white; transition: background-color 0.3s; }
         .active-shelter { background-color: #4cd964 !important; }
         
-        #log-modal, #info-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
+        #log-modal, #info-modal, #road-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
         .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 80vh; border-radius: 15px; overflow-y: auto; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; position: relative; }
         
         .info-content { background: rgba(30, 30, 30, 0.95); color: #eee; line-height: 1.5; padding: 20px; font-size: 13px; }
@@ -50,6 +50,10 @@
         .shelter-beam { width: 4px; height: 180px; background: linear-gradient(to top, rgba(76, 217, 100, 0.9), rgba(76, 217, 100, 0)); box-shadow: 0 0 12px rgba(76, 217, 100, 0.8); transform-origin: bottom; position: absolute; bottom: 0px; animation: beam-flicker 2s infinite alternate ease-in-out; }
         @keyframes beam-flicker { from { opacity: 0.6; transform: scaleY(1); } to { opacity: 1; transform: scaleY(1.3); } }
         .shelter-logo-icon { width: 52px; height: 52px; margin-bottom: 180px; background-size: contain; background-repeat: no-repeat; background-position: center; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.9)); pointer-events: auto; cursor: pointer; }
+        
+        /* 路面投稿用デザイン */
+        .road-report-btn { background-color: #ff9500; background-image: url('https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/ice.png'); background-size: 28px; background-repeat: no-repeat; background-position: center; }
+        .road-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); cursor: pointer; }
     </style>
 </head>
 <body>
@@ -65,6 +69,22 @@
 <div id="map"></div>
 
 <div id="log-modal"><div class="modal-content log-modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:15px; overflow-y:auto; max-height:55vh;"><div style="text-align:center; color:#999;">現在、報告はありません</div></div></div></div>
+
+<div id="road-modal">
+    <div class="modal-content" style="background: white; width: 320px; padding: 20px; border-radius: 15px; color: #333;">
+        <h3 style="margin-top:0; font-size:18px;">道路の状況を教えて</h3>
+        <p style="font-size:12px; margin-bottom:5px; font-weight:bold;">道路の滑り具合は？（必須）</p>
+        <select id="road-level" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd; font-size:14px;">
+            <option value="3">非常に滑りやすい</option>
+            <option value="2">滑りやすい</option>
+            <option value="1">あまり滑らない</option>
+        </select>
+        <p style="font-size:12px; margin-bottom:5px; font-weight:bold;">状況を教えてください。（任意）</p>
+        <textarea id="road-comment" maxlength="60" placeholder="60文字以内" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ddd; height:60px; box-sizing: border-box; font-size:14px; resize:none;"></textarea>
+        <button onclick="submitRoadReport()" style="background:#ff9500; color:white; border:none; padding:14px; border-radius:8px; width:100%; font-weight:bold; cursor:pointer; font-size:15px;">投稿する</button>
+        <button onclick="closeRoadReport()" style="background:none; color:#999; border:none; width:100%; margin-top:10px; cursor:pointer; font-size:12px;">キャンセル</button>
+    </div>
+</div>
 
 <div id="info-modal">
     <div class="modal-content info-content">
@@ -89,6 +109,7 @@
 
 <div class="mt-controls">
     <button class="mt-btn log-toggle-btn" onclick="openLog()"></button>
+    <button class="mt-btn road-report-btn" onclick="openRoadReport()"></button>
     <button id="shelter-btn" class="mt-btn shelter-toggle-btn" onclick="toggleShelters()"></button>
     <button class="mt-btn" onclick="jumpToCurrentLocation()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06z"/></svg></button>
     <button class="mt-btn" onclick="map.zoomIn()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
@@ -112,6 +133,7 @@
     let reportLog = [];
     let sandboxData = { type: 'FeatureCollection', features: [] };
     let shelterMarkers = [];
+    let roadMarkers = [];
     let sheltersVisible = false;
     let isTracking = false; 
     let initialGPSLocked = false;
@@ -149,6 +171,33 @@
     function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
     function openInfo() { document.getElementById('info-modal').style.display = 'flex'; }
     function closeInfo() { document.getElementById('info-modal').style.display = 'none'; }
+
+    // 路面投稿関連
+    function openRoadReport() {
+        if (!lastCoords) { alert("現在地を取得できませんでした。"); return; }
+        // 札幌市内制限
+        const lon = lastCoords[0]; const lat = lastCoords[1];
+        if (lon < 141.0 || lon > 141.6 || lat < 42.8 || lat > 43.2) {
+            alert("札幌市内のみ投稿可能です。"); return;
+        }
+        document.getElementById('road-modal').style.display = 'flex';
+    }
+    function closeRoadReport() { document.getElementById('road-modal').style.display = 'none'; }
+    function submitRoadReport() {
+        const level = document.getElementById('road-level').value;
+        const comment = document.getElementById('road-comment').value;
+        // 少し位置をずらす処理（ランダムに0.00005度程度）
+        const offsetLng = (Math.random() - 0.5) * 0.0001;
+        const offsetLat = (Math.random() - 0.5) * 0.0001;
+        
+        db.ref('road_reports').push({
+            lat: lastCoords[1] + offsetLat, lng: lastCoords[0] + offsetLng,
+            level: level, comment: comment, timestamp: Date.now()
+        });
+        alert("みんなに役立つ情報をありがとう！");
+        closeRoadReport();
+        document.getElementById('road-comment').value = "";
+    }
 
     const canvas = document.getElementById('snow-canvas');
     const ctx = canvas.getContext('2d');
@@ -230,6 +279,25 @@
                     updateLogPanel(); 
                     loadAndRunGraphics(); 
                 });
+                // 路面投稿データの監視（6時間以内）
+                db.ref('road_reports').on('value', (snapshot) => {
+                    const data = snapshot.val() || {};
+                    roadMarkers.forEach(m => m.remove());
+                    roadMarkers = [];
+                    const now = Date.now();
+                    Object.values(data).forEach(report => {
+                        if (now - report.timestamp < 6 * 60 * 60 * 1000) {
+                            const color = report.level === '3' ? '#ff3b30' : (report.level === '2' ? '#ffcc00' : '#007aff');
+                            const el = document.createElement('div'); el.className = 'road-dot'; el.style.backgroundColor = color;
+                            const marker = new mapboxgl.Marker(el).setLngLat([report.lng, report.lat]);
+                            if (report.comment) {
+                                marker.setPopup(new mapboxgl.Popup({offset:10}).setHTML(`<div style="color:#333;font-size:12px;padding:5px;">${report.comment}</div>`));
+                            }
+                            marker.addTo(map);
+                            roadMarkers.push(marker);
+                        }
+                    });
+                });
                 map.addSource('sunabako-source', { 'type': 'geojson', 'data': sandboxData });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 15, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
                 map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
@@ -266,7 +334,7 @@
 
     function updateLogPanel() {
         const list = document.getElementById('log-list'); 
-        if (reportLog.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999;">現在、報告はありません</div>'; return; }
+        if (reportLog.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999; font-size:12px;">現在、報告はありません</div>'; return; }
         list.innerHTML = reportLog.map((log, i) => `
             <div style="border-bottom:1px solid #eee; padding:12px 0; display:flex; justify-content:space-between; align-items:center;">
                 <div onclick="closeLog(); map.flyTo({center:[${rawData[log.id]['経度（度）']}, ${rawData[log.id]['緯度（度）']}], zoom:18.5})" style="cursor:pointer;">
