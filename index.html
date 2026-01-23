@@ -26,7 +26,7 @@
         .shelter-toggle-btn { background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png'); background-size: 32px; background-color: white; transition: background-color 0.3s; }
         .active-shelter { background-color: #4cd964 !important; }
         
-        /* Yahoo天気風 投稿ボタン設定（位置をボトムから90pxに調整） */
+        /* Yahoo風 投稿ボタン設定 */
         .road-report-btn-yahoo {
             position: absolute;
             bottom: 90px;
@@ -48,7 +48,39 @@
             transition: transform 0.1s;
         }
         .road-report-btn-yahoo:active { transform: scale(0.95); }
-        .road-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); cursor: pointer; }
+
+        /* 路面状況 凡例パネル */
+        #road-legend {
+            position: absolute;
+            bottom: 140px;
+            left: 15px;
+            z-index: 1000;
+            background: rgba(40, 40, 40, 0.85);
+            padding: 8px 12px;
+            border-radius: 10px;
+            color: white;
+            font-family: sans-serif;
+            font-size: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* 地図上のアイコン用スタイル */
+        .road-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+        .road-icon-comment { border: 3px solid white; width: 36px; height: 36px; }
 
         #log-modal, #info-modal, #road-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 20000; backdrop-filter: blur(5px); }
         .modal-content { background: rgba(255, 255, 255, 0.95); width: 340px; max-height: 80vh; border-radius: 15px; overflow-y: auto; box-shadow: 0 15px 40px rgba(0,0,0,0.6); font-family: sans-serif; position: relative; }
@@ -87,6 +119,13 @@
 </div>
 
 <div id="map"></div>
+
+<div id="road-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#ff3b30;"></div>非常に滑りやすい</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffcc00;"></div>滑りやすい</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#007aff;"></div>あまり滑らない</div>
+    <div class="legend-item" style="margin-top:2px; border-top:1px solid #555; padding-top:2px; opacity:0.8;">※白枠はコメントあり</div>
+</div>
 
 <button class="road-report-btn-yahoo" onclick="openRoadReport()">
     <span style="font-size: 18px;">💬</span>
@@ -261,7 +300,9 @@
     function applyGlowingEffect() {
         if (!map.isStyleLoaded()) return;
         const now = new Date();
-        const currentTime = now.getHours() + now.getMinutes() / 60;
+        const hour = now.getHours();
+        const min = now.getMinutes();
+        const currentTime = hour + min / 60;
         let preset = (currentTime >= 6 && currentTime < 15) ? 'day' : (currentTime >= 15 && currentTime < 16.5) ? 'dusk' : 'night';
         map.setConfigProperty('basemap', 'lightPreset', preset);
         map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
@@ -302,6 +343,8 @@
                     updateLogPanel(); 
                     loadAndRunGraphics(); 
                 });
+
+                // 路面投稿データの監視（6時間以内・カスタム画像アイコン版）
                 db.ref('road_reports').on('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     roadMarkers.forEach(m => m.remove());
@@ -309,17 +352,28 @@
                     const now = Date.now();
                     Object.values(data).forEach(report => {
                         if (now - report.timestamp < 6 * 60 * 60 * 1000) {
-                            const color = report.level === '3' ? '#ff3b30' : (report.level === '2' ? '#ffcc00' : '#007aff');
-                            const el = document.createElement('div'); el.className = 'road-dot'; el.style.backgroundColor = color;
+                            // 画像URLの選択（生データURLに変換）
+                            let iconUrl = "";
+                            if (report.level === '3') iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level3.jpg";
+                            else if (report.level === '2') iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level2.jpg";
+                            else iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level1.jpg";
+
+                            // アイコン要素の作成
+                            const el = document.createElement('div');
+                            el.className = 'road-icon';
+                            if (report.comment) el.classList.add('road-icon-comment'); // コメントありなら白枠付与
+                            el.style.backgroundImage = `url('${iconUrl}')`;
+
                             const marker = new mapboxgl.Marker(el).setLngLat([report.lng, report.lat]);
                             if (report.comment) {
-                                marker.setPopup(new mapboxgl.Popup({offset:10}).setHTML(`<div style="color:#333;font-size:12px;padding:5px;">${report.comment}</div>`));
+                                marker.setPopup(new mapboxgl.Popup({offset:15}).setHTML(`<div style="color:#333;font-size:12px;padding:5px;">${report.comment}</div>`));
                             }
                             marker.addTo(map);
                             roadMarkers.push(marker);
                         }
                     });
                 });
+
                 map.addSource('sunabako-source', { 'type': 'geojson', 'data': sandboxData });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 15, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
                 map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
