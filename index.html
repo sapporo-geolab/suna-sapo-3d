@@ -301,7 +301,6 @@
         alert("砂をまいてくれてありがとう！あなたに幸運が訪れますように");
         const popup = document.querySelector('.mapboxgl-popup');
         if (popup) popup.remove();
-        // アニメーション用トリガー(1をセットして描画側に通知)
         window.activeAnimationId = id;
         setTimeout(() => { window.activeAnimationId = null; }, 3000);
     };
@@ -317,7 +316,6 @@
         const pitch = map.getPitch(); 
         const is3D = pitch > 25;
 
-        // 星噴き出しアニメーション (activeAnimationIdがある時)
         if (window.activeAnimationId !== null && rawData[window.activeAnimationId]) {
             const pos = map.project([parseFloat(rawData[window.activeAnimationId]['経度（度）']), parseFloat(rawData[window.activeAnimationId]['緯度（度）'])]);
             for(let i=0; i<5; i++){
@@ -369,27 +367,38 @@
         try {
             const response = await fetch(gistUrl);
             let scriptContent = await response.text();
-            // 星の描画ロジックを注入
-            const starInject = `
+            
+            // 修正：既存の描画ロジックを破壊せず、最後に星のデータを差し込む
+            const starInjectCode = `
+                // 蓄積された星の描画
                 Object.keys(window.spreadStars || {}).forEach(id => {
                     const count = window.spreadStars[id];
                     const row = rawData[id];
                     if(!row) return;
                     const lat = parseFloat(row['緯度（度）']), lon = parseFloat(row['経度（度）']);
                     const aspect = 1.0 / Math.cos(lat * Math.PI / 180);
-                    for(let s=0; s<Math.min(count, 20); s++){
+                    for(let s=0; s<Math.min(count, 15); s++){
                         const ang = (s * 137.5) * Math.PI / 180;
-                        const r = 0.000004 * Math.sqrt(s) * scale;
-                        newFeatures.push({ 'type': 'Feature', 'properties': { 'part': 'star_pixel', 'color': '#FFD700', 'height': 0.2*scale, 'base': 0 }, 'geometry': { 'type': 'Point', 'coordinates': [lon + r * Math.cos(ang) * aspect, lat + r * Math.sin(ang)] } });
+                        const r = 0.000004 * Math.sqrt(s) * (map.getZoom() < 16 ? 4.0 : 1.5);
+                        newFeatures.push({ 
+                            'type': 'Feature', 
+                            'properties': { 'part': 'star_pixel', 'color': '#FFD700', 'height': 0.1, 'base': 0 }, 
+                            'geometry': { 'type': 'Point', 'coordinates': [lon + r * Math.cos(ang) * aspect, lat + r * Math.sin(ang)] } 
+                        });
                     }
                 });
             `;
-            const drawFunc = new Function('map', 'rawData', 'sandboxData', 'scale', scriptContent.replace('geojsonObj.features = newFeatures;', starInject + 'geojsonObj.features = newFeatures;'));
-            drawFunc(map, rawData, sandboxData, map.getZoom() < 16 ? 4.0 : 1.5);
+            
+            // 安全にインジェクトするために newFeatures.push を目印にする
+            const finalScript = scriptContent.replace('geojsonObj.features = newFeatures;', starInjectCode + 'geojsonObj.features = newFeatures;');
+            
+            const drawFunc = new Function('map', 'rawData', 'sandboxData', finalScript);
+            drawFunc(map, rawData, sandboxData);
+            
             if (map.getSource('sunabako-source')) { map.getSource('sunabako-source').setData(sandboxData); }
             applyGlowingEffect();
             hideLoader();
-        } catch (e) { console.error(e); hideLoader(); }
+        } catch (e) { console.error("Graphics Load Error:", e); hideLoader(); }
     }
 
     map.on('load', () => {
@@ -398,7 +407,6 @@
             download: true, header: true, skipEmptyLines: true,
             complete: async function(results) {
                 rawData = results.data;
-                // 砂切れ報告同期
                 db.ref('reports').on('value', (snapshot) => {
                     const reports = snapshot.val() || {};
                     rawData.forEach((item, idx) => { item.isGray = !!reports[idx]; });
@@ -406,7 +414,6 @@
                     updateLogPanel(); 
                     loadAndRunGraphics(); 
                 });
-                // 徳積み(星)同期
                 db.ref('sand_spread').on('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     const now = Date.now();
@@ -417,7 +424,6 @@
                     });
                     loadAndRunGraphics();
                 });
-                // 路面投稿同期
                 db.ref('road_reports').on('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     roadMarkers.forEach(m => m.remove());
