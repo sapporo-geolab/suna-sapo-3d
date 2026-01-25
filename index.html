@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>すなサポtest2</title>
+    <title>すなサポ</title>
     <link rel="icon" href="https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png" type="image/png">
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
@@ -73,21 +73,14 @@
 </div>
 
 <div id="map"></div>
-
 <div id="road-legend">
     <div class="legend-item"><div class="legend-dot" style="background:#ff3b30;"></div>非常に滑りやすい</div>
     <div class="legend-item"><div class="legend-dot" style="background:#ffcc00;"></div>滑りやすい</div>
     <div class="legend-item"><div class="legend-dot" style="background:#007aff;"></div>あまり滑らない</div>
     <div class="legend-item" style="margin-top:2px; border-top:1px solid #555; padding-top:2px; opacity:0.8;">※白枠はコメントあり</div>
 </div>
-
-<button class="road-report-btn-yahoo" onclick="openRoadReport()">
-    <span style="font-size: 18px;">💬</span>
-    投稿する
-</button>
-
+<button class="road-report-btn-yahoo" onclick="openRoadReport()"><span style="font-size: 18px;">💬</span> 投稿する</button>
 <div id="log-modal"><div class="modal-content log-modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:15px; overflow-y:auto; max-height:55vh;"><div style="text-align:center; color:#999;">現在、報告はありません</div></div></div></div>
-
 <div id="road-modal">
     <div class="modal-content" style="background: white; width: 320px; padding: 20px; border-radius: 15px; color: #333;">
         <h3 style="margin-top:0; font-size:18px;">道路の状況を教えて</h3>
@@ -103,17 +96,7 @@
         <button onclick="closeRoadReport()" style="background:none; color:#999; border:none; width:100%; margin-top:10px; cursor:pointer; font-size:12px;">キャンセル</button>
     </div>
 </div>
-
-<div id="layer-modal" onclick="closeLayer()">
-    <div class="layer-panel" onclick="event.stopPropagation()">
-        <div class="layer-title">表示レイヤー</div>
-        <div id="layer-shelter" class="layer-item" onclick="toggleLayer('shelter')">
-            <div class="layer-icon-box" style="background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png');"></div>
-            <div class="layer-label">避難所</div>
-        </div>
-    </div>
-</div>
-
+<div id="layer-modal" onclick="closeLayer()"><div class="layer-panel" onclick="event.stopPropagation()"><div class="layer-title">表示レイヤー</div><div id="layer-shelter" class="layer-item" onclick="toggleLayer('shelter')"><div class="layer-icon-box" style="background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png');"></div><div class="layer-label">避難所</div></div></div></div>
 <div id="info-modal">
     <div class="modal-content info-content">
         <button class="close-btn-round" onclick="closeInfo()">✕</button>
@@ -121,6 +104,7 @@
         <p>このアプリケーションは <a href="https://github.com/sapporo-geolab" target="_blank">岡本 卓也</a> により作成されました。</p>
         <p>本アプリケーションが利用する砂箱および避難所の位置情報データは、札幌市ICT活用プラットフォーム「<a href="https://data.pf-sapporo.jp/" target="_blank">DATA-SMART CITY SAPPORO</a>」において公開されているオープンデータを利用しています。</p>
         <p style="margin-top:15px; font-weight:bold;">💡 つかいかた</p>
+        <p style="margin-left:5px; margin-bottom:4px;">・<b>砂をまく</b>: 地図上の砂箱をタップして「砂をまきました！」ボタンを押すと、足元に星が積もります。</p>
         <p style="margin-left:5px; margin-bottom:4px;">・<b>砂切れを教える</b>: 地図上の砂箱をタップして「砂切れをみんなに教える」ボタンを押してください。</p>
         <p style="margin-left:5px; margin-bottom:4px;">・<b>状況を確認する</b>: 右上の砂箱アイコンを押すと、現在報告されている砂切れリストを確認できます。</p>
         <p style="margin-left:5px; margin-bottom:4px;">・<b>レイヤーを選ぶ</b>: 右側のメニューボタンから避難所などの表示を切り替えられます。</p>
@@ -132,15 +116,11 @@
         <p style="font-size: 11px; color: #888; text-align: center; margin-top: 15px;">©2026 Takuya Okamoto</p>
     </div>
 </div>
-
 <canvas id="snow-canvas"></canvas>
 <div class="info-panel"><div id="date-display">----年--月--日(-)</div><div id="time-display">00:00:00</div></div>
-
 <div class="mt-controls">
     <button class="mt-btn log-toggle-btn" onclick="openLog()"></button>
-    <button class="mt-btn" onclick="openLayer()">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="#333"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>
-    </button>
+    <button class="mt-btn" onclick="openLayer()"><svg viewBox="0 0 24 24" width="28" height="28" fill="#333"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg></button>
     <button class="mt-btn" onclick="jumpToCurrentLocation()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06z"/></svg></button>
     <button class="mt-btn" onclick="map.zoomIn()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
     <button class="mt-btn" onclick="map.zoomOut()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M19 13H5v-2h14v2z"/></svg></button>
@@ -203,7 +183,6 @@
     function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
     function openInfo() { document.getElementById('info-modal').style.display = 'flex'; }
     function closeInfo() { document.getElementById('info-modal').style.display = 'none'; }
-
     function openLayer() { document.getElementById('layer-modal').style.display = 'flex'; }
     function closeLayer() { document.getElementById('layer-modal').style.display = 'none'; }
     function toggleLayer(type) {
@@ -216,10 +195,6 @@
 
     function openRoadReport() {
         if (!lastCoords) { alert("現在地を取得できませんでした。"); return; }
-        const lon = lastCoords[0]; const lat = lastCoords[1];
-        if (lon < 141.0 || lon > 141.6 || lat < 42.8 || lat > 43.2) {
-            alert("札幌市内のみ投稿可能です。"); return;
-        }
         document.getElementById('road-modal').style.display = 'flex';
     }
     function closeRoadReport() { document.getElementById('road-modal').style.display = 'none'; }
@@ -238,7 +213,7 @@
         for (let i = 0; i < 24; i++) {
             const vx = (Math.random() - 0.5) * 0.00004;
             const vy = (Math.random() - 0.5) * 0.00004;
-            const targetLng = originLng + (Math.random() - 0.5) * 0.00045; // 範囲をサークル直径の約2倍に拡大
+            const targetLng = originLng + (Math.random() - 0.5) * 0.00045;
             const targetLat = originLat + (Math.random() - 0.5) * 0.00045;
             db.ref('stars').push({ originLng, originLat, targetLng, targetLat, vx, vy, createdAt: now });
         }
@@ -350,7 +325,7 @@
             id: 'stars-layer', type: 'symbol', source: 'stars-source', slot: 'top',
             layout: { 
                 'icon-image': 'star-icon', 
-                'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.05, 18, 0.24], // 2倍の大きさにし、縮小時は小さくなるように設定
+                'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.05, 18, 0.24], 
                 'icon-allow-overlap': true, 
                 'icon-ignore-placement': true 
             },
@@ -417,6 +392,8 @@
         }, 1000);
     });
 
+    map.on('zoomend', loadAndRunGraphics);
+
     function loadShelters() {
         const shelterCsvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/439bfe19b1a67005f9ca196dc8de7749/raw/55a5b8e97eab134fae8d880d05daa40c916971b4/shelters.csv';
         Papa.parse(shelterCsvUrl, { download: true, header: true, skipEmptyLines: true, complete: function(results) {
@@ -453,4 +430,3 @@
 </script>
 </body>
 </html>
-
