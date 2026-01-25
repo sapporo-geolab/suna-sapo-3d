@@ -126,7 +126,7 @@
         <p style="margin-left:5px; margin-bottom:4px;">・<b>レイヤーを選ぶ</b>: 右側のメニューボタンから避難所などの表示を切り替えられます。</p>
         <p style="margin-left:5px; margin-bottom:4px;">・<b>現在地へ行く</b>: 右側のターゲットマークを押すと、あなたの今いる場所へジャンプします。</p>
         <p style="margin-left:5px; margin-bottom:4px;">・<b>路面状況を投稿する</b>: 左下の「投稿する」ボタンから、現在の滑り具合をみんなに共有できます。</p>
-        <p style="margin-top:15px;">砂箱データは平成30年時点のものであり、現地の状況と必ずしも一致しない場合があります。</p>
+        <p style="margin-top:15px;">砂箱データは平成30年時点のものであるあり、現地の状況と必ずしも一致しない場合があります。</p>
         <p>本アプリケーションの表示内容やデータについて、札幌市および関連事業者への直接の問い合わせは行わないでください。</p>
         <p>ソースコードは <a href="https://github.com/sapporo-geolab" target="_blank">GitHub リポジトリ</a> にて公開されています。</p>
         <p style="font-size: 11px; color: #888; text-align: center; margin-top: 15px;">©2026 Takuya Okamoto</p>
@@ -204,7 +204,6 @@
     function openInfo() { document.getElementById('info-modal').style.display = 'flex'; }
     function closeInfo() { document.getElementById('info-modal').style.display = 'none'; }
 
-    // レイヤー関連
     function openLayer() { document.getElementById('layer-modal').style.display = 'flex'; }
     function closeLayer() { document.getElementById('layer-modal').style.display = 'none'; }
     function toggleLayer(type) {
@@ -215,32 +214,20 @@
         }
     }
 
-    // 路面投稿関連
     function openRoadReport() {
         if (!lastCoords) { alert("現在地を取得できませんでした。"); return; }
-        const lon = lastCoords[0]; const lat = lastCoords[1];
-        if (lon < 141.0 || lon > 141.6 || lat < 42.8 || lat > 43.2) {
-            alert("札幌市内のみ投稿可能です。"); return;
-        }
         document.getElementById('road-modal').style.display = 'flex';
     }
     function closeRoadReport() { document.getElementById('road-modal').style.display = 'none'; }
     function submitRoadReport() {
         const level = document.getElementById('road-level').value;
         const comment = document.getElementById('road-comment').value;
-        const offsetLng = (Math.random() - 0.5) * 0.0001;
-        const offsetLat = (Math.random() - 0.5) * 0.0001;
-        
-        db.ref('road_reports').push({
-            lat: lastCoords[1] + offsetLat, lng: lastCoords[0] + offsetLng,
-            level: level, comment: comment, timestamp: Date.now()
-        });
+        db.ref('road_reports').push({ lat: lastCoords[1], lng: lastCoords[0], level: level, comment: comment, timestamp: Date.now() });
         alert("みんなに役立つ情報をありがとう！");
         closeRoadReport();
         document.getElementById('road-comment').value = "";
     }
 
-    // 星をまく処理のアップデート
     window.spreadSand = function(id) {
         const s = rawData[id]; const now = Date.now();
         const originLng = parseFloat(s['経度（度）']), originLat = parseFloat(s['緯度（度）']);
@@ -298,9 +285,13 @@
             if (!s.isLanded) {
                 s.lon += s.vx; s.lat += s.vy;
                 s.vx *= 0.95; s.vy *= 0.95; 
-                if (Math.abs(s.vx) < 0.0000001) s.isLanded = true;
+                // 停止判定
+                if (Math.abs(s.vx) < 0.0000001) {
+                    s.isLanded = true;
+                    s.lon = s.targetLng; s.lat = s.targetLat; // 目的地へピタッと固定
+                }
             } else {
-                // 着地済みの場合は目的地座標に完全固定
+                // 着地後は絶対に座標を動かさない
                 s.lon = s.targetLng; s.lat = s.targetLat;
             }
         });
@@ -367,7 +358,7 @@
                         id: key, 
                         lon: isLanded ? s.targetLng : s.originLng, 
                         lat: isLanded ? s.targetLat : s.originLat,
-                        targetLng: s.targetLng, targetLat: s.targetLat, // 保存用
+                        targetLng: s.targetLng, targetLat: s.targetLat,
                         vx: s.vx, vy: s.vy, createdAt: s.createdAt, isLanded: isLanded
                     });
                 }
@@ -387,34 +378,22 @@
                     loadAndRunGraphics(); 
                     animateStarsLoop();
                 });
-
                 db.ref('road_reports').on('value', (snapshot) => {
                     const data = snapshot.val() || {};
                     roadMarkers.forEach(m => m.remove());
                     roadMarkers = [];
-                    const now = Date.now();
                     Object.values(data).forEach(report => {
-                        if (now - report.timestamp < 6 * 60 * 60 * 1000) {
-                            let iconUrl = "";
-                            if (report.level === '3') iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level3.jpg";
-                            else if (report.level === '2') iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level2.jpg";
-                            else iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level1.jpg";
-
+                        if (Date.now() - report.timestamp < 21600000) {
+                            let iconUrl = "https://raw.githubusercontent.com/sapporo-geolab/suna-sapo-3d/main/level" + report.level + ".jpg";
                             const el = document.createElement('div');
-                            el.className = 'road-icon';
-                            if (report.comment) el.classList.add('road-icon-comment');
+                            el.className = 'road-icon' + (report.comment ? ' road-icon-comment' : '');
                             el.style.backgroundImage = `url('${iconUrl}')`;
-
                             const marker = new mapboxgl.Marker(el).setLngLat([report.lng, report.lat]);
-                            if (report.comment) {
-                                marker.setPopup(new mapboxgl.Popup({offset:15}).setHTML(`<div style="color:#333;font-size:12px;padding:5px;">${report.comment}</div>`));
-                            }
-                            marker.addTo(map);
-                            roadMarkers.push(marker);
+                            if (report.comment) marker.setPopup(new mapboxgl.Popup({offset:15}).setHTML(`<div style="color:#333;font-size:12px;padding:5px;">${report.comment}</div>`));
+                            marker.addTo(map); roadMarkers.push(marker);
                         }
                     });
                 });
-
                 map.addSource('sunabako-source', { 'type': 'geojson', 'data': sandboxData });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 15, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
                 map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
@@ -432,14 +411,13 @@
 
     function loadShelters() {
         const shelterCsvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/439bfe19b1a67005f9ca196dc8de7749/raw/55a5b8e97eab134fae8d880d05daa40c916971b4/shelters.csv';
-        const shelterIconUrl = 'https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png';
         Papa.parse(shelterCsvUrl, { download: true, header: true, skipEmptyLines: true, complete: function(results) {
             results.data.forEach(row => {
                 const lon = parseFloat(row['経度']); const lat = parseFloat(row['緯度']);
                 if (!isNaN(lon) && !isNaN(lat)) {
                     const container = document.createElement('div'); container.className = 'shelter-beam-container';
                     const beam = document.createElement('div'); beam.className = 'shelter-beam';
-                    const iconMark = document.createElement('div'); iconMark.className = 'shelter-logo-icon'; iconMark.style.backgroundImage = `url('${shelterIconUrl}')`;
+                    const iconMark = document.createElement('div'); iconMark.className = 'shelter-logo-icon'; iconMark.style.backgroundImage = `url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png')`;
                     container.appendChild(beam); container.appendChild(iconMark);
                     const marker = new mapboxgl.Marker(container).setLngLat([lon, lat]).setPopup(new mapboxgl.Popup().setHTML(`<div style="color:#333; padding:5px; font-family:sans-serif;"><b>${row['施設名'] || row['避難所名']}</b></div>`));
                     shelterMarkers.push(marker); if (sheltersVisible) marker.addTo(map);
@@ -485,8 +463,6 @@
                 </div>`).addTo(map);
         }
     });
-    map.on('mouseenter', 'sunabako-click-area', () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', 'sunabako-click-area', () => { map.getCanvas().style.cursor = ''; });
 </script>
 </body>
 </html>
