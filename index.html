@@ -73,21 +73,14 @@
 </div>
 
 <div id="map"></div>
-
 <div id="road-legend">
     <div class="legend-item"><div class="legend-dot" style="background:#ff3b30;"></div>非常に滑りやすい</div>
     <div class="legend-item"><div class="legend-dot" style="background:#ffcc00;"></div>滑りやすい</div>
     <div class="legend-item"><div class="legend-dot" style="background:#007aff;"></div>あまり滑らない</div>
     <div class="legend-item" style="margin-top:2px; border-top:1px solid #555; padding-top:2px; opacity:0.8;">※白枠はコメントあり</div>
 </div>
-
-<button class="road-report-btn-yahoo" onclick="openRoadReport()">
-    <span style="font-size: 18px;">💬</span>
-    投稿する
-</button>
-
+<button class="road-report-btn-yahoo" onclick="openRoadReport()"><span style="font-size: 18px;">💬</span> 投稿する</button>
 <div id="log-modal"><div class="modal-content log-modal-content"><div class="modal-header"><span>📢 砂切れ報告リスト</span><span class="close-modal" onclick="closeLog()">✕</span></div><div id="log-list" style="padding:15px; overflow-y:auto; max-height:55vh;"><div style="text-align:center; color:#999;">現在、報告はありません</div></div></div></div>
-
 <div id="road-modal">
     <div class="modal-content" style="background: white; width: 320px; padding: 20px; border-radius: 15px; color: #333;">
         <h3 style="margin-top:0; font-size:18px;">道路の状況を教えて</h3>
@@ -103,17 +96,7 @@
         <button onclick="closeRoadReport()" style="background:none; color:#999; border:none; width:100%; margin-top:10px; cursor:pointer; font-size:12px;">キャンセル</button>
     </div>
 </div>
-
-<div id="layer-modal" onclick="closeLayer()">
-    <div class="layer-panel" onclick="event.stopPropagation()">
-        <div class="layer-title">表示レイヤー</div>
-        <div id="layer-shelter" class="layer-item" onclick="toggleLayer('shelter')">
-            <div class="layer-icon-box" style="background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png');"></div>
-            <div class="layer-label">避難所</div>
-        </div>
-    </div>
-</div>
-
+<div id="layer-modal" onclick="closeLayer()"><div class="layer-panel" onclick="event.stopPropagation()"><div class="layer-title">表示レイヤー</div><div id="layer-shelter" class="layer-item" onclick="toggleLayer('shelter')"><div class="layer-icon-box" style="background-image: url('https://raw.githubusercontent.com/sapporo-geolab/hinanzyo-img/main/hinanzyo.png');"></div><div class="layer-label">避難所</div></div></div></div>
 <div id="info-modal">
     <div class="modal-content info-content">
         <button class="close-btn-round" onclick="closeInfo()">✕</button>
@@ -132,15 +115,11 @@
         <p style="font-size: 11px; color: #888; text-align: center; margin-top: 15px;">©2026 Takuya Okamoto</p>
     </div>
 </div>
-
 <canvas id="snow-canvas"></canvas>
 <div class="info-panel"><div id="date-display">----年--月--日(-)</div><div id="time-display">00:00:00</div></div>
-
 <div class="mt-controls">
     <button class="mt-btn log-toggle-btn" onclick="openLog()"></button>
-    <button class="mt-btn" onclick="openLayer()">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="#333"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg>
-    </button>
+    <button class="mt-btn" onclick="openLayer()"><svg viewBox="0 0 24 24" width="28" height="28" fill="#333"><path d="M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z"/></svg></button>
     <button class="mt-btn" onclick="jumpToCurrentLocation()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06z"/></svg></button>
     <button class="mt-btn" onclick="map.zoomIn()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
     <button class="mt-btn" onclick="map.zoomOut()"><svg viewBox="0 0 24 24" width="24" height="24" fill="#333"><path d="M19 13H5v-2h14v2z"/></svg></button>
@@ -203,6 +182,7 @@
     function closeLog() { document.getElementById('log-modal').style.display = 'none'; }
     function openInfo() { document.getElementById('info-modal').style.display = 'flex'; }
     function closeInfo() { document.getElementById('info-modal').style.display = 'none'; }
+
     function openLayer() { document.getElementById('layer-modal').style.display = 'flex'; }
     function closeLayer() { document.getElementById('layer-modal').style.display = 'none'; }
     function toggleLayer(type) {
@@ -231,10 +211,10 @@
         const s = rawData[id]; const now = Date.now();
         const originLng = parseFloat(s['経度（度）']), originLat = parseFloat(s['緯度（度）']);
         for (let i = 0; i < 24; i++) {
-            const vx = (Math.random() - 0.5) * 0.00003; // 指示書より少し速く
-            const vy = (Math.random() - 0.5) * 0.00003;
-            const targetLng = originLng + (Math.random() - 0.5) * 0.00008;
-            const targetLat = originLat + (Math.random() - 0.5) * 0.00008;
+            const vx = (Math.random() - 0.5) * 0.00004; // 初期速度を少し上げ拡散感を出す
+            const vy = (Math.random() - 0.5) * 0.00004;
+            const targetLng = originLng + (Math.random() - 0.5) * 0.00012; // 拡散範囲を拡大
+            const targetLat = originLat + (Math.random() - 0.5) * 0.00012;
             db.ref('stars').push({ originLng, originLat, targetLng, targetLat, vx, vy, createdAt: now });
         }
         alert("砂をまいてくれてありがとう！あなたに素敵なことがありますように");
@@ -248,18 +228,27 @@
     window.addEventListener('resize', resize); resize();
     function updateSnow() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const pitch = map.getPitch(); const is3D = pitch > 25;
+        const pitch = map.getPitch(); 
+        const is3D = pitch > 25;
         if (particles.length < 160) {
             particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 2.5 + 0.5, o: Math.random() * 0.4 + 0.2, vx: (Math.random() - 0.5) * 0.8, vy: Math.random() * 1.2 + 0.8 });
         }
         for (let i = 0; i < particles.length; i++) {
-            let p = particles[i]; let fadeOut = 1;
+            let p = particles[i];
+            let fadeOut = 1;
             if (p.y > canvas.height * 0.8) fadeOut = 1 - (p.y - canvas.height * 0.8) / (canvas.height * 0.2);
-            ctx.beginPath(); ctx.fillStyle = `rgba(255, 255, 255, ${p.o * fadeOut})`;
-            if (!is3D) { const scale = 1 - (p.y / canvas.height) * 0.5; ctx.arc(p.x, p.y, p.r * scale, 0, Math.PI * 2); p.y += p.vy; }
-            else {
-                const perspective = (p.y / canvas.height); const speed = p.vy * (1 + perspective * 1.2); const xShift = (p.x - canvas.width / 2) * (perspective * 0.06);
-                ctx.arc(p.x + xShift, p.y, Math.min(p.r * (1 + perspective * 1.5), 4), 0, Math.PI * 2);
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(255, 255, 255, ${p.o * fadeOut})`;
+            if (!is3D) {
+                const scale = 1 - (p.y / canvas.height) * 0.5;
+                ctx.arc(p.x, p.y, p.r * scale, 0, Math.PI * 2);
+                p.y += p.vy;
+            } else {
+                const perspective = (p.y / canvas.height);
+                const speed = p.vy * (1 + perspective * 1.2);
+                const xShift = (p.x - canvas.width / 2) * (perspective * 0.06);
+                let displayRadius = Math.min(p.r * (1 + perspective * 1.5), 4);
+                ctx.arc(p.x + xShift, p.y, displayRadius, 0, Math.PI * 2);
                 p.y += speed; p.x += p.vx + xShift * 0.01;
             }
             if (p.y > canvas.height || p.x < -50 || p.x > canvas.width + 50 || fadeOut <= 0) { p.y = -20; p.x = Math.random() * canvas.width; }
@@ -275,15 +264,19 @@
             if (!s.isLanded) {
                 const elapsed = now - s.createdAt;
                 if (elapsed > 1500) {
-                    s.isLanded = true; s.lon = s.targetLng; s.lat = s.targetLat;
+                    s.isLanded = true;
+                    s.lon = s.targetLng;
+                    s.lat = s.targetLat;
                 } else {
                     const progress = elapsed / 1500;
-                    // 開始点から目的地までイージングして移動
+                    // 開始位置から目標位置まで線形補完して移動（吸い込み防止）
                     s.lon = s.originLng + (s.targetLng - s.originLng) * progress;
                     s.lat = s.originLat + (s.targetLat - s.originLat) * progress;
                 }
             } else {
-                s.lon = s.targetLng; s.lat = s.targetLat; // 位置を完全固定
+                // 着地済みなら目的地に完全固定
+                s.lon = s.targetLng;
+                s.lat = s.targetLat;
             }
         });
         if (map.getSource('stars-source')) {
@@ -294,11 +287,16 @@
     
     function applyGlowingEffect() {
         if (!map.isStyleLoaded()) return;
-        const now = new Date(); const hour = now.getHours(); const min = now.getMinutes(); const currentTime = hour + min / 60;
+        const now = new Date();
+        const hour = now.getHours();
+        const min = now.getMinutes();
+        const currentTime = hour + min / 60;
         let preset = (currentTime >= 6 && currentTime < 15) ? 'day' : (currentTime >= 15 && currentTime < 16.5) ? 'dusk' : 'night';
         map.setConfigProperty('basemap', 'lightPreset', preset);
         map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
-        if (map.getLayer('sunabako-layer')) { map.setPaintProperty('sunabako-layer', 'fill-extrusion-emissive-strength', (preset === 'dusk' || preset === 'night') ? 0.8 : 0); }
+        if (map.getLayer('sunabako-layer')) {
+            map.setPaintProperty('sunabako-layer', 'fill-extrusion-emissive-strength', (preset === 'dusk' || preset === 'night') ? 0.8 : 0);
+        }
     }
     
     function hideLoader() {
@@ -315,7 +313,8 @@
             const drawFunc = new Function('map', 'rawData', 'sandboxData', scriptContent + '\nupdateSandboxGraphics(map, rawData, sandboxData);');
             drawFunc(map, rawData, sandboxData);
             if (map.getSource('sunabako-source')) { map.getSource('sunabako-source').setData(sandboxData); }
-            applyGlowingEffect(); hideLoader();
+            applyGlowingEffect();
+            hideLoader();
         } catch (e) { console.error(e); hideLoader(); }
     }
 
@@ -331,14 +330,20 @@
         });
 
         db.ref('stars').on('value', (snapshot) => {
-            const data = snapshot.val() || {}; const now = Date.now(); activeStars = [];
+            const data = snapshot.val() || {};
+            const now = Date.now();
+            activeStars = [];
             Object.keys(data).forEach(key => {
                 const s = data[key];
                 if (now - s.createdAt < SIX_HOURS_MS) {
-                    const elapsed = now - s.createdAt; const isLanded = elapsed > 1500;
+                    const elapsed = now - s.createdAt;
+                    const isLanded = elapsed > 1500; 
                     activeStars.push({
-                        id: key, originLng: s.originLng, originLat: s.originLat, targetLng: s.targetLng, targetLat: s.targetLat,
-                        lon: isLanded ? s.targetLng : s.originLng, lat: isLanded ? s.targetLat : s.originLat,
+                        id: key, 
+                        lon: isLanded ? s.targetLng : s.originLng, 
+                        lat: isLanded ? s.targetLat : s.originLat,
+                        originLng: s.originLng, originLat: s.originLat,
+                        targetLng: s.targetLng, targetLat: s.targetLat,
                         vx: s.vx, vy: s.vy, createdAt: s.createdAt, isLanded: isLanded
                     });
                 }
@@ -354,7 +359,9 @@
                     const reports = snapshot.val() || {};
                     rawData.forEach((item, idx) => { item.isGray = !!reports[idx]; });
                     reportLog = Object.keys(reports).map(id => ({ id: id, address: rawData[id]['住所'], time: reports[id].timeLabel })).reverse();
-                    updateLogPanel(); loadAndRunGraphics(); animateStarsLoop();
+                    updateLogPanel(); 
+                    loadAndRunGraphics(); 
+                    animateStarsLoop();
                 });
                 db.ref('road_reports').on('value', (snapshot) => {
                     const data = snapshot.val() || {}; roadMarkers.forEach(m => m.remove()); roadMarkers = [];
@@ -382,11 +389,13 @@
         }, 1000);
     });
 
+    map.on('zoomend', loadAndRunGraphics);
+
     function loadShelters() {
         const shelterCsvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/439bfe19b1a67005f9ca196dc8de7749/raw/55a5b8e97eab134fae8d880d05daa40c916971b4/shelters.csv';
         Papa.parse(shelterCsvUrl, { download: true, header: true, skipEmptyLines: true, complete: function(results) {
             results.data.forEach(row => {
-                const lon = parseFloat(row['経度']), lat = parseFloat(row['緯度']);
+                const lon = parseFloat(row['経度']); const lat = parseFloat(row['緯度']);
                 if (!isNaN(lon) && !isNaN(lat)) {
                     const container = document.createElement('div'); container.className = 'shelter-beam-container';
                     const beam = document.createElement('div'); beam.className = 'shelter-beam';
@@ -398,6 +407,7 @@
             });
         }});
     }
+
     function updateLogPanel() {
         const list = document.getElementById('log-list'); if (reportLog.length === 0) { list.innerHTML = '<div style="text-align:center; color:#999;">現在、報告はありません</div>'; return; }
         list.innerHTML = reportLog.map(log => `<div style="border-bottom:1px solid #eee; padding:12px 0; display:flex; justify-content:space-between; align-items:center;"><div onclick="closeLog(); map.flyTo({center:[${rawData[log.id]['経度（度）']}, ${rawData[log.id]['緯度（度）']}], zoom:18.5})" style="cursor:pointer;"><div style="color:#ff3b30; font-size:11px;">確認：${log.time}</div><div style="font-weight:bold; font-size:13px;">${log.address.replace('北海道札幌市', '')}</div></div><button onclick="markAsDone(${log.id})" style="background:#4cd964; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">補充されました！</button></div>`).join('');
