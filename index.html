@@ -168,8 +168,6 @@
     let isTracking = false; 
     let initialGPSLocked = false;
     let lastCoords = null;
-
-    // 1. 変数と初期化の追加
     let activeStars = []; const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 
     mapboxgl.accessToken = 'pk.eyJ1Ijoic2FwcG9yby1nZW9sYWIiLCJhIjoiY21rbm4yOXE5MDdwNDNkczh5MnlqNnI4eCJ9.Utenu-9vEz56uGUETeWS1g';
@@ -242,14 +240,14 @@
         document.getElementById('road-comment').value = "";
     }
 
-    // 3. 星をまく処理のアップデート
+    // 星をまく処理のアップデート
     window.spreadSand = function(id) {
         const s = rawData[id]; const now = Date.now();
         const originLng = parseFloat(s['経度（度）']), originLat = parseFloat(s['緯度（度）']);
-        for (let i = 0; i < 24; i++) { // 数を24個に増量
+        for (let i = 0; i < 24; i++) {
             const vx = (Math.random() - 0.5) * 0.000015;
             const vy = (Math.random() - 0.5) * 0.000015;
-            const targetLng = originLng + (Math.random() - 0.5) * 0.00008; // 適切な広がり
+            const targetLng = originLng + (Math.random() - 0.5) * 0.00008;
             const targetLat = originLat + (Math.random() - 0.5) * 0.00008;
             db.ref('stars').push({ originLng, originLat, targetLng, targetLat, vx, vy, createdAt: now });
         }
@@ -293,15 +291,17 @@
         requestAnimationFrame(updateSnow);
     }
 
-    // 4. アニメーションループの追加
     function animateStarsLoop() {
         const now = Date.now();
         activeStars = activeStars.filter(s => (now - s.createdAt) < SIX_HOURS_MS);
         activeStars.forEach(s => {
             if (!s.isLanded) {
                 s.lon += s.vx; s.lat += s.vy;
-                s.vx *= 0.95; s.vy *= 0.95; // 摩擦で減速
+                s.vx *= 0.95; s.vy *= 0.95; 
                 if (Math.abs(s.vx) < 0.0000001) s.isLanded = true;
+            } else {
+                // 着地済みの場合は目的地座標に完全固定
+                s.lon = s.targetLng; s.lat = s.targetLat;
             }
         });
         if (map.getSource('stars-source')) {
@@ -318,7 +318,6 @@
         const currentTime = hour + min / 60;
         let preset = (currentTime >= 6 && currentTime < 15) ? 'day' : (currentTime >= 15 && currentTime < 16.5) ? 'dusk' : 'night';
         map.setConfigProperty('basemap', 'lightPreset', preset);
-        // 5. ループ起動とUI調整
         map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
         if (map.getLayer('sunabako-layer')) {
             map.setPaintProperty('sunabako-layer', 'fill-extrusion-emissive-strength', (preset === 'dusk' || preset === 'night') ? 0.8 : 0);
@@ -345,7 +344,6 @@
     }
 
     map.on('load', () => {
-        // 2. 星のレイヤーとFirebase監視の追加
         const starCanvas = document.createElement('canvas'); starCanvas.width = 64; starCanvas.height = 64;const starCtx = starCanvas.getContext('2d'); starCtx.font = '48px serif'; starCtx.textAlign = 'center'; starCtx.textBaseline = 'middle';
         starCtx.fillText('⭐', 32, 32); map.addImage('star-icon', starCtx.getImageData(0, 0, 64, 64));
 
@@ -354,7 +352,8 @@
             id: 'stars-layer', type: 'symbol', source: 'stars-source', slot: 'top',
             layout: { 'icon-image': 'star-icon', 'icon-size': 0.12, 'icon-allow-overlap': true, 'icon-ignore-placement': true },
             paint: { 'icon-emissive-strength': 1.0 }
-        });// Firebase同期監視 (既存の星を動かさないロジック)
+        });
+
         db.ref('stars').on('value', (snapshot) => {
             const data = snapshot.val() || {};
             const now = Date.now();
@@ -363,9 +362,12 @@
                 const s = data[key];
                 if (now - s.createdAt < SIX_HOURS_MS) {
                     const elapsed = now - s.createdAt;
-                    const isLanded = elapsed > 1500; // 1.5秒経過していれば着地済み
+                    const isLanded = elapsed > 1500; 
                     activeStars.push({
-                        id: key, lon: isLanded ? s.targetLng : s.originLng, lat: isLanded ? s.targetLat : s.originLat,
+                        id: key, 
+                        lon: isLanded ? s.targetLng : s.originLng, 
+                        lat: isLanded ? s.targetLat : s.originLat,
+                        targetLng: s.targetLng, targetLat: s.targetLat, // 保存用
                         vx: s.vx, vy: s.vy, createdAt: s.createdAt, isLanded: isLanded
                     });
                 }
@@ -383,7 +385,7 @@
                     reportLog = Object.keys(reports).map(id => ({ id: id, address: rawData[id]['住所'], time: reports[id].timeLabel })).reverse();
                     updateLogPanel(); 
                     loadAndRunGraphics(); 
-                    animateStarsLoop(); // 5. ループ起動
+                    animateStarsLoop();
                 });
 
                 db.ref('road_reports').on('value', (snapshot) => {
