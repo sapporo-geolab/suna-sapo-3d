@@ -168,7 +168,7 @@
     let isTracking = false; 
     let initialGPSLocked = false;
     let lastCoords = null;
-    
+
     // 1. 変数と初期化の追加
     let activeStars = []; const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
 
@@ -292,7 +292,7 @@
         }
         requestAnimationFrame(updateSnow);
     }
-    
+
     // 4. アニメーションループの追加
     function animateStarsLoop() {
         const now = Date.now();
@@ -318,7 +318,7 @@
         const currentTime = hour + min / 60;
         let preset = (currentTime >= 6 && currentTime < 15) ? 'day' : (currentTime >= 15 && currentTime < 16.5) ? 'dusk' : 'night';
         map.setConfigProperty('basemap', 'lightPreset', preset);
-        // 指示書の確認：POIラベルを非表示
+        // 5. ループ起動とUI調整
         map.setConfigProperty('basemap', 'showPointOfInterestLabels', false);
         if (map.getLayer('sunabako-layer')) {
             map.setPaintProperty('sunabako-layer', 'fill-extrusion-emissive-strength', (preset === 'dusk' || preset === 'night') ? 0.8 : 0);
@@ -354,8 +354,7 @@
             id: 'stars-layer', type: 'symbol', source: 'stars-source', slot: 'top',
             layout: { 'icon-image': 'star-icon', 'icon-size': 0.12, 'icon-allow-overlap': true, 'icon-ignore-placement': true },
             paint: { 'icon-emissive-strength': 1.0 }
-        });
-
+        });// Firebase同期監視 (既存の星を動かさないロジック)
         db.ref('stars').on('value', (snapshot) => {
             const data = snapshot.val() || {};
             const now = Date.now();
@@ -383,9 +382,8 @@
                     rawData.forEach((item, idx) => { item.isGray = !!reports[idx]; });
                     reportLog = Object.keys(reports).map(id => ({ id: id, address: rawData[id]['住所'], time: reports[id].timeLabel })).reverse();
                     updateLogPanel(); 
-                    // 5. ループ起動
                     loadAndRunGraphics(); 
-                    animateStarsLoop();
+                    animateStarsLoop(); // 5. ループ起動
                 });
 
                 db.ref('road_reports').on('value', (snapshot) => {
