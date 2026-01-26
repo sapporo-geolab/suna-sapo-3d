@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>すなサポtest4</title>
+    <title>すなサポtest3</title>
     <link rel="icon" href="https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png" type="image/png">
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
@@ -61,11 +61,12 @@
         @keyframes beam-flicker { from { opacity: 0.6; transform: scaleY(1); } to { opacity: 1; transform: scaleY(1.3); } }
         .shelter-logo-icon { width: 52px; height: 52px; margin-bottom: 180px; background-size: contain; background-repeat: no-repeat; background-position: center; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.9)); pointer-events: auto; cursor: pointer; }
 
-        /* 今回追加のスタイル */
+        /* 追加のスタイル設定 */
         #rule-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: none; justify-content: center; align-items: center; z-index: 30000; }
-        .rule-content { background: white; width: 300px; max-height: 70vh; padding: 20px; border-radius: 15px; color: #333; position: relative; overflow-y: auto; font-size: 13px; line-height: 1.6; }
+        .rule-content { background: white; width: 310px; max-height: 75vh; padding: 25px 20px; border-radius: 15px; color: #333; position: relative; overflow-y: auto; font-size: 13px; line-height: 1.6; font-family: sans-serif; }
         .info-icon-small { cursor: pointer; color: #1e88e5; font-size: 18px; vertical-align: middle; margin-left: 8px; }
-        .close-rule-btn { position: absolute; top: 10px; right: 10px; font-size: 28px; font-weight: bold; color: #999; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .close-rule-btn { position: absolute; top: 10px; right: 10px; font-size: 28px; font-weight: bold; color: #999; cursor: pointer; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
+        .rule-section-title { font-weight: bold; margin-top: 15px; display: block; }
     </style>
 </head>
 <body>
@@ -110,25 +111,39 @@
 <div id="rule-modal">
     <div class="rule-content">
         <div class="close-rule-btn" onclick="closeRule()">✕</div>
-        <h3 style="margin-top: 10px;">利用のルール</h3>
-        <p>「路面状況の投稿」は、みなさんが冬道の状況を自由に共有し、札幌の冬を安全に歩くための場です。快適な利用環境を提供するため、不適切な投稿には厳しく対処いたします。</p>
+        <h3 style="margin-top: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px;">すなサポ 利用のルール - 路面状況の投稿</h3>
+        <p>「路面状況の投稿」は、すなサポを利用するみなさんが、今いる場所の滑り具合や冬道の状況を自由に共有し、札幌の冬を安全に歩くための場です。</p>
+        <p>開発者では、多くの方々が快適に利用できる環境を提供するために、明らかに悪意のある行為や不正利用、不適切な投稿には厳しく対処を行っております。</p>
         
-        <p><b>■投稿情報の取り扱い</b><br>
-        ・投稿内容はすべての利用者に公開されます。<br>
-        ・投稿は6時間経過すると自動的に消去されます。<br>
-        ・開発者が不適切と判断した投稿は手動で削除する場合があります。<br>
-        ・不正利用防止のため、IPアドレス等のアクセスログを一定期間保持しています。</p>
+        <b class="rule-section-title">お客様から投稿いただいた情報の取り扱いについて</b>
+        <p>・<b>情報の公開</b>: 投稿された位置情報、滑り具合のレベル、コメントは、すべての利用者に公開されます。<br>
+        ・<b>保存期間</b>: 投稿は一定時間（6時間）経過すると地図上から自動的に消去されます。<br>
+        ・<b>削除権限</b>: 開発者が不適切と判断した投稿については、自動消滅を待たず手動で削除を行う場合があります。<br>
+        ・<b>アクセス情報の記録</b>: 不正利用防止および安全性確保のため、投稿時のIPアドレス等のアクセスログを一定期間保持しています。</p>
 
-        <p><b>■注意事項</b><br>
-        以下の投稿は禁止です。<br>
-        ・他人を不快にさせる投稿、誹謗中傷<br>
-        ・個人を特定できる情報の投稿（住所、電話番号など）<br>
-        ・虚偽、誤情報の投稿<br>
-        ・犯罪予告、法令違反、いたずら<br>
-        ・商業目的、宣伝、出会い目的</p>
+        <b class="rule-section-title">投稿にあたっての注意事項</b>
+        <p>投稿する際には、次の内容が含まれる投稿を禁止しています。ルールを遵守した上でのご利用をお願いします。</p>
 
-        <p><b>■違反への対処</b><br>
-        ルール違反時は投稿を削除します。悪質な場合はログに基づき警察への通報や情報開示を行うことがあります。</p>
+        <p><b>■他人を不快にさせる投稿、誹謗中傷</b><br>
+        ・特定の個人や団体を攻撃したり、不快感・嫌悪感を生じさせる表現（暴言、いやがらせ、煽りなど）は禁止です。</p>
+
+        <p><b>■個人を特定できる情報の投稿</b><br>
+        ・自分や他人を問わず、名前、住所、電話番号、SNSアカウントIDなどの個人情報の公開は、不法行為に該当する場合があります。</p>
+
+        <p><b>■偽情報・誤情報の投稿</b><br>
+        ・実際とは異なる滑り具合を意図的に投稿するなど、他者の安全を脅かす恐れのある虚偽の情報の投稿は禁止です。</p>
+
+        <p><b>■犯罪行為の予告、法令違反</b><br>
+        ・法令違反や犯罪行為を誘発・助長する内容、いたずらの投稿は禁止です。</p>
+
+        <p><b>■その他、不適切と判断される行為</b><br>
+        ・商業目的の宣伝、広告行為、出会いを目的とする投稿。<br>
+        ・意味をなさない文字や記号の羅列などの荒らし行為。<br>
+        ・公序良俗に反するわいせつ・暴力的な表現。</p>
+
+        <b class="rule-section-title">違反と判断した場合の対処について</b>
+        <p>開発者が利用ルールに違反している、または不適切であると判断した場合は、投稿の削除を行います。<br>
+        また、犯罪予告や名誉毀損、業務妨害罪などに該当する悪質な投稿がなされた場合、記録しているアクセスログに基づき、警察への通報や情報開示を行う場合があります。</p>
     </div>
 </div>
 
@@ -229,7 +244,6 @@
         }
     }
 
-    // 利用ルール表示用関数
     function openRule() { document.getElementById('rule-modal').style.display = 'flex'; }
     function closeRule() { document.getElementById('rule-modal').style.display = 'none'; }
 
@@ -474,4 +488,3 @@
 </script>
 </body>
 </html>
-
