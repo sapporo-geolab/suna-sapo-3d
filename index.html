@@ -85,21 +85,20 @@
             bottom: 30px !important;
             left: 50% !important;
             transform: translateX(-50%) !important;
-            width: 90% !important;
+            width: 95% !important;
             max-width: 500px !important;
-            z-index: 800; /* モーダル20000より奥、地図より手前 */
+            z-index: 21000 !important; /* 既存UIより手前に */
         }
         .live-camera-main-popup .mapboxgl-popup-tip { display: none !important; }
         .live-camera-main-popup .mapboxgl-popup-content {
             background: #1a1a1a;
             color: #fff;
-            border-radius: 12px;
+            border-radius: 12px !important; /* 角丸を適用 */
             padding: 0;
             overflow: hidden;
             box-shadow: 0 15px 40px rgba(0,0,0,0.6);
         }
-        .live-camera-main-popup .mapboxgl-popup-content,
-        .live-camera-main-popup .mapboxgl-popup-content iframe { border-radius: 0px !important; }
+        .live-camera-main-popup .mapboxgl-popup-content iframe { border-bottom-left-radius: 12px !important; border-bottom-right-radius: 12px !important; }
         .live-camera-main-popup .mapboxgl-popup-close-button { color: #fff; font-size: 24px; padding: 10px; z-index: 11; }
         .popup-header-cam { padding: 10px 15px; font-weight: bold; font-size: 14px; background: #2a2a2a; }
     </style>
@@ -235,6 +234,9 @@
     let initialGPSLocked = false;
     let lastCoords = null;
     let activeStars = []; const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    
+    // 雪のエフェクト制御フラグ
+    let isSnowEnabled = true;
 
     // ライブカメラ用変数の追加
     let hoverPopup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'hover-video-popup', offset: 15, anchor: 'bottom' });
@@ -325,6 +327,7 @@
     window.addEventListener('resize', resize); resize();
     function updateSnow() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!isSnowEnabled) { requestAnimationFrame(updateSnow); return; } // 動画表示中は描画しない
         const pitch = map.getPitch(); 
         const is3D = pitch > 25;
         if (particles.length < 160) {
@@ -475,55 +478,47 @@
             }
         });
 
-       // 3. ホバーイベント（プレビュー表示：サムネイル画像版）
         map.on('mouseenter', 'camera-layer', (e) => {
             map.getCanvas().style.cursor = 'pointer';
             const coords = e.features[0].geometry.coordinates.slice();
             const { title, videoId } = e.features[0].properties;
-            
-            // YouTubeのサムネイル画像URL（高画質版：mqdefault.jpg）
             const thumbUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-
             hoverPopup.setLngLat(coords).setHTML(`
                 <div class="hover-video-title">${title}</div>
                 <div style="width:180px; aspect-ratio:16/9; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                     <img src="${thumbUrl}" style="width:100%; height:100%; object-fit:cover;">
-                </div>
-            `).addTo(map);
+                </div>`).addTo(map);
         });
+        map.on('mouseleave', 'camera-layer', () => { map.getCanvas().style.cursor = ''; hoverPopup.remove(); });
 
-        map.on('mouseleave', 'camera-layer', () => {
-            map.getCanvas().style.cursor = '';
-            hoverPopup.remove();
-        });
-
-        // 4. クリックイベント（小・大両方のポップアップを表示）
         map.on('click', 'camera-layer', (e) => {
             const f = e.features[0];
             const { title, videoId } = f.properties;
             const coords = f.geometry.coordinates.slice();
-            
-            // アイコンが三段配置の「中心」に来るように、少し上にオフセットしてカメラを移動
             map.flyTo({ center: coords, zoom: 17.5, pitch: 60, offset: [0, -100] });
             
-            // 小画面（サムネイル画像）を強制表示
+            // 小画面を強制表示
             const thumbUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
             hoverPopup.setLngLat(coords).setHTML(`
                 <div class="hover-video-title">${title}</div>
                 <div style="width:180px; aspect-ratio:16/9; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;">
                     <img src="${thumbUrl}" style="width:100%; height:100%; object-fit:cover;">
-                </div>
-            `).addTo(map);
+                </div>`).addTo(map);
 
-            // 大画面ポップアップ（動画再生）を表示
-            new mapboxgl.Popup({ className: 'live-camera-main-popup', anchor: 'bottom' })
+            // 雪をオフにする
+            isSnowEnabled = false;
+
+            const mainPopup = new mapboxgl.Popup({ className: 'live-camera-main-popup', anchor: 'bottom' })
                 .setLngLat(coords)
                 .setHTML(`
                     <div class="popup-header-cam">🎥 ${title}</div>
                     <div style="width:100%; aspect-ratio:16/9; background:#000;">
                         <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-                    </div>
-                `).addTo(map);
+                    </div>`)
+                .addTo(map);
+
+            // ポップアップを閉じたら雪を再開
+            mainPopup.on('close', () => { isSnowEnabled = true; });
         });
 
         const csvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ca0f9f45e8a5e2064678f14eb8e7e933/raw/33abeeab3374bc93c97d208c90056b7355c04802/h301.csv';
@@ -603,5 +598,3 @@
 </script>
 </body>
 </html>
-
-
