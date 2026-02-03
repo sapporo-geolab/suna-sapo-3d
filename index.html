@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>すなサポtest6</title>
+    <title>すなサポtest7</title>
     <link rel="icon" href="https://raw.githubusercontent.com/sapporo-geolab/sunahako-img/main/sunahako.png" type="image/png">
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
@@ -475,29 +475,55 @@
             }
         });
 
+       // 3. ホバーイベント（プレビュー表示：サムネイル画像版）
         map.on('mouseenter', 'camera-layer', (e) => {
             map.getCanvas().style.cursor = 'pointer';
             const coords = e.features[0].geometry.coordinates.slice();
             const { title, videoId } = e.features[0].properties;
-            hoverPopup.setLngLat(coords).setHTML(`<div class="hover-video-title">${title}</div><div style="width:180px; aspect-ratio:16/9; background:#000;"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0" frameborder="0"></iframe></div>`).addTo(map);
-        });
-        map.on('mouseleave', 'camera-layer', () => { map.getCanvas().style.cursor = ''; hoverPopup.remove(); });
+            
+            // YouTubeのサムネイル画像URL（高画質版：mqdefault.jpg）
+            const thumbUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
 
+            hoverPopup.setLngLat(coords).setHTML(`
+                <div class="hover-video-title">${title}</div>
+                <div style="width:180px; aspect-ratio:16/9; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                    <img src="${thumbUrl}" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+            `).addTo(map);
+        });
+
+        map.on('mouseleave', 'camera-layer', () => {
+            map.getCanvas().style.cursor = '';
+            hoverPopup.remove();
+        });
+
+        // 4. クリックイベント（小・大両方のポップアップを表示）
         map.on('click', 'camera-layer', (e) => {
             const f = e.features[0];
             const { title, videoId } = f.properties;
             const coords = f.geometry.coordinates.slice();
+            
             // アイコンが三段配置の「中心」に来るように、少し上にオフセットしてカメラを移動
             map.flyTo({ center: coords, zoom: 17.5, pitch: 60, offset: [0, -100] });
             
-            // 小画面を強制表示
-            hoverPopup.setLngLat(coords).setHTML(`<div class="hover-video-title">${title}</div><div style="width:180px; aspect-ratio:16/9; background:#000;"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0" frameborder="0"></iframe></div>`).addTo(map);
+            // 小画面（サムネイル画像）を強制表示
+            const thumbUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+            hoverPopup.setLngLat(coords).setHTML(`
+                <div class="hover-video-title">${title}</div>
+                <div style="width:180px; aspect-ratio:16/9; background:#000; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                    <img src="${thumbUrl}" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+            `).addTo(map);
 
-            // 大画面ポップアップを表示
+            // 大画面ポップアップ（動画再生）を表示
             new mapboxgl.Popup({ className: 'live-camera-main-popup', anchor: 'bottom' })
                 .setLngLat(coords)
-                .setHTML(`<div class="popup-header-cam">🎥 ${title}</div><div style="width:100%; aspect-ratio:16/9; background:#000;"><iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe></div>`)
-                .addTo(map);
+                .setHTML(`
+                    <div class="popup-header-cam">🎥 ${title}</div>
+                    <div style="width:100%; aspect-ratio:16/9; background:#000;">
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                    </div>
+                `).addTo(map);
         });
 
         const csvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ca0f9f45e8a5e2064678f14eb8e7e933/raw/33abeeab3374bc93c97d208c90056b7355c04802/h301.csv';
@@ -577,3 +603,4 @@
 </script>
 </body>
 </html>
+
