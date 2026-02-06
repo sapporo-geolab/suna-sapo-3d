@@ -1,0 +1,17 @@
+{
+  "name": "すなサポ",
+  "short_name": "すなサポ",
+  "description": "札幌の冬道をみんなの力で安全に。砂箱と路面状況の3Dマップ。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#004d40",
+  "theme_color": "#004d40",
+  "icons": [
+    {
+      "src": "./app_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
