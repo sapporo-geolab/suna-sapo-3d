@@ -104,8 +104,8 @@
     </style>
     <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="app_logo.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
 <script>
   if ('serviceWorker' in navigator) {
@@ -544,7 +544,7 @@
                 });
                 map.addSource('sunabako-source', { 'type': 'geojson', 'data': sandboxData });
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 15, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
-                map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
+                map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['coalesce', ['get', 'height'], 0], 'fill-extrusion-base': ['coalesce', ['get', 'base'], 0], 'fill-extrusion-vertical-gradient': true } });
                 updateSnow(); loadShelters();
             } // ← ここで async function の箱を閉じる
         }); // ← ここで最初の Papa.parse の箱を閉じる
@@ -624,6 +624,7 @@
 </script>
 </body>
 </html>
+
 
 
 
