@@ -468,31 +468,7 @@
             });
         });
 
-        // --- ライブカメラの実装 ---
-        const camSvg = `<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="30" fill="white" stroke="#333" stroke-width="3"/><path d="M18 22h20a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V24a2 2 0 0 1 2-2zm24 6l8-4v16l-8-4v-8z" fill="#333"/></svg>`;
-        const camImg = new Image();
-        camImg.onload = () => map.addImage('camera-custom', camImg);
-        camImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(camSvg);
-
-        Papa.parse(cameraCsvUrl, {
-            download: true, header: true, skipEmptyLines: true,
-            complete: (results) => {
-                const camFeatures = results.data.map(row => {
-                    const title = row['タイトル'] || row['No'] || "不明";
-                    const latLngStr = row['緯度経度'] || "";
-                    const parts = latLngStr.split(',').map(s => parseFloat(s.trim()));
-                    const vUrl = row['URL'] || "";
-                    let vId = vUrl.includes('v=') ? vUrl.split('v=')[1].split('&')[0] : (vUrl.includes('youtu.be/') ? vUrl.split('youtu.be/')[1].split('?')[0] : "");
-                    if (parts.length === 2 && !isNaN(parts[0])) {
-                        return { 'type': 'Feature', 'properties': { 'title': title, 'videoId': vId }, 'geometry': { 'type': 'Point', 'coordinates': [parts[1], parts[0]] } };
-                    }
-                    return null;
-                }).filter(f => f !== null);
-                map.addSource('live-cameras', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': camFeatures } });
-                map.addLayer({ 'id': 'camera-layer', 'type': 'symbol', 'source': 'live-cameras', 'slot': 'top', 'layout': { 'icon-image': 'camera-custom', 'icon-size': 0.6, 'icon-allow-overlap': true } });
-            }
-        });
-
+       
         map.on('mouseenter', 'camera-layer', (e) => {
             map.getCanvas().style.cursor = 'pointer';
             const coords = e.features[0].geometry.coordinates.slice();
@@ -566,8 +542,31 @@
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 15, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
                 map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
                 updateSnow(); loadShelters();
-            }
-        });
+
+ // --- ライブカメラの実装 ---
+        const camSvg = `<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="30" fill="white" stroke="#333" stroke-width="3"/><path d="M18 22h20a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V24a2 2 0 0 1 2-2zm24 6l8-4v16l-8-4v-8z" fill="#333"/></svg>`;
+        const camImg = new Image();
+        camImg.onload = () => map.addImage('camera-custom', camImg);
+        camImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(camSvg);
+
+        Papa.parse(cameraCsvUrl, {
+            download: true, header: true, skipEmptyLines: true,
+            complete: (results) => {
+                const camFeatures = results.data.map(row => {
+                    const title = row['タイトル'] || row['No'] || "不明";
+                    const latLngStr = row['緯度経度'] || "";
+                    const parts = latLngStr.split(',').map(s => parseFloat(s.trim()));
+                    const vUrl = row['URL'] || "";
+                    let vId = vUrl.includes('v=') ? vUrl.split('v=')[1].split('&')[0] : (vUrl.includes('youtu.be/') ? vUrl.split('youtu.be/')[1].split('?')[0] : "");
+                    if (parts.length === 2 && !isNaN(parts[0])) {
+                        return { 'type': 'Feature', 'properties': { 'title': title, 'videoId': vId }, 'geometry': { 'type': 'Point', 'coordinates': [parts[1], parts[0]] } };
+                    }
+                    return null;
+                }).filter(f => f !== null);
+                map.addSource('live-cameras', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': camFeatures } });
+                map.addLayer({ 'id': 'camera-layer', 'type': 'symbol', 'source': 'live-cameras', 'slot': 'top', 'layout': { 'icon-image': 'camera-custom', 'icon-size': 0.6, 'icon-allow-overlap': true } });
+});
+
         setInterval(() => {
             document.getElementById('date-display').textContent = `${new Date().getFullYear()}年${new Date().getMonth()+1}月${new Date().getDate()}日`;
             document.getElementById('time-display').textContent = new Date().toLocaleTimeString('ja-JP', {hour12:false});
@@ -576,7 +575,7 @@
     });
 
     map.on('zoomend', loadAndRunGraphics);
-
+        
     function loadShelters() {
         const shelterCsvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/439bfe19b1a67005f9ca196dc8de7749/raw/55a5b8e97eab134fae8d880d05daa40c916971b4/shelters.csv';
         Papa.parse(shelterCsvUrl, { download: true, header: true, skipEmptyLines: true, complete: function(results) {
@@ -613,6 +612,7 @@
 </script>
 </body>
 </html>
+
 
 
 
