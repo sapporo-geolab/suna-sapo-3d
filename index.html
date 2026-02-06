@@ -239,6 +239,35 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    // --- プッシュ通知の設定 ---
+    const messaging = firebase.messaging();
+
+    // 通知の許可を得てトークンを取得する関数
+    async function setupNotifications() {
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                const token = await messaging.getToken({ 
+                    vapidKey: 'BKbaWR5kRAzRrlyhcU_IAk4z6xQgMMlyxio4d6Q1kzItqsQcNraGa_qvzuma7m9r2dB2UtwgHr7tYKdvXyzI-o4' 
+                });
+                if (token) {
+                    console.log('通知用トークンを取得しました:', token);
+                    // このトークンはブラウザのデベロッパーツール（F12）で確認できます
+                }
+            }
+        } catch (error) {
+            console.error('通知設定エラー:', error);
+        }
+    }
+    // アプリ起動時に実行
+    setupNotifications();
+
+    // アプリが開いている間に通知が届いた時の処理
+    messaging.onMessage((payload) => {
+        console.log('メッセージを受信しました:', payload);
+        alert(`${payload.notification.title}\n${payload.notification.body}`);
+    });
+    // --- 通知設定ここまで ---
     let rawData = [];
     let reportLog = [];
     let sandboxData = { type: 'FeatureCollection', features: [] };
@@ -624,6 +653,7 @@
 </script>
 </body>
 </html>
+
 
 
 
