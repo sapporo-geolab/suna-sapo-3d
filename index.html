@@ -102,6 +102,20 @@
         .live-camera-main-popup .mapboxgl-popup-close-button { color: #fff; font-size: 24px; padding: 10px; z-index: 11; }
         .popup-header-cam { padding: 10px 15px; font-weight: bold; font-size: 14px; background: #2a2a2a; }
     </style>
+    <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="app_logo.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registered', reg))
+        .catch(err => console.error('Service Worker registration failed', err));
+    });
+  }
+</script>
 </head>
 <body>
 
@@ -599,6 +613,7 @@
 </script>
 </body>
 </html>
+
 
 
 
