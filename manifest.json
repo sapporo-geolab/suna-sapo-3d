@@ -4,7 +4,7 @@
   "description": "札幌の冬道をみんなの力で安全に。砂箱と路面状況の3Dマップ。",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#004d40",
+  "background_color": "#ffffff",
   "theme_color": "#004d40",
   "icons": [
     {
@@ -14,4 +14,5 @@
       "purpose": "any maskable"
     }
   ]
+
 }
