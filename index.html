@@ -516,7 +516,7 @@
             mainPopup.on('close', () => { isSnowEnabled = true; });
         });
 
-        const csvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ca0f9f45e8a5e2064678f14eb8e7e933/raw/33abeeab3374bc93c97d208c90056b7355c04802/h301.csv';
+       const csvUrl = 'https://gist.githubusercontent.com/sapporo-geolab/ca0f9f45e8a5e2064678f14eb8e7e933/raw/33abeeab3374bc93c97d208c90056b7355c04802/h301.csv';
         Papa.parse(csvUrl, {
             download: true, header: true, skipEmptyLines: true,
             complete: async function(results) {
@@ -546,8 +546,10 @@
                 map.addLayer({ 'id': 'sunabako-click-area', 'type': 'circle', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'circle-radius': 15, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 0 } });
                 map.addLayer({ 'id': 'sunabako-layer', 'type': 'fill-extrusion', 'source': 'sunabako-source', 'slot': 'top', 'paint': { 'fill-extrusion-color': ['get', 'color'], 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-base': ['get', 'base'], 'fill-extrusion-vertical-gradient': true } });
                 updateSnow(); loadShelters();
+            } // ← ここで async function の箱を閉じる
+        }); // ← ここで最初の Papa.parse の箱を閉じる
 
- // --- ライブカメラの実装 ---
+        // --- ライブカメラの実装 ---
         const camSvg = `<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="30" fill="white" stroke="#333" stroke-width="3"/><path d="M18 22h20a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V24a2 2 0 0 1 2-2zm24 6l8-4v16l-8-4v-8z" fill="#333"/></svg>`;
         const camImg = new Image();
         camImg.onload = () => map.addImage('camera-custom', camImg);
@@ -567,17 +569,18 @@
                     }
                     return null;
                 }).filter(f => f !== null);
-         map.addSource('live-cameras', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': camFeatures } });
+                map.addSource('live-cameras', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': camFeatures } });
                 map.addLayer({ 'id': 'camera-layer', 'type': 'symbol', 'source': 'live-cameras', 'slot': 'top', 'layout': { 'icon-image': 'camera-custom', 'icon-size': 0.6, 'icon-allow-overlap': true } });
             }
         });
 
+        // 時計は map.on('load') の中かつ、他の Papa.parse の外に配置
         setInterval(() => {
             document.getElementById('date-display').textContent = `${new Date().getFullYear()}年${new Date().getMonth()+1}月${new Date().getDate()}日`;
             document.getElementById('time-display').textContent = new Date().toLocaleTimeString('ja-JP', {hour12:false});
             applyGlowingEffect();
         }, 1000);
-    });
+    }); // ここで map.on('load') を閉じる
 
     map.on('zoomend', loadAndRunGraphics);
         
@@ -621,6 +624,7 @@
 </script>
 </body>
 </html>
+
 
 
 
