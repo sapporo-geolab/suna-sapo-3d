@@ -567,9 +567,10 @@
                     }
                     return null;
                 }).filter(f => f !== null);
-                map.addSource('live-cameras', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': camFeatures } });
+         map.addSource('live-cameras', { 'type': 'geojson', 'data': { 'type': 'FeatureCollection', 'features': camFeatures } });
                 map.addLayer({ 'id': 'camera-layer', 'type': 'symbol', 'source': 'live-cameras', 'slot': 'top', 'layout': { 'icon-image': 'camera-custom', 'icon-size': 0.6, 'icon-allow-overlap': true } });
-});
+            }
+        });
 
         setInterval(() => {
             document.getElementById('date-display').textContent = `${new Date().getFullYear()}年${new Date().getMonth()+1}月${new Date().getDate()}日`;
@@ -620,6 +621,7 @@
 </script>
 </body>
 </html>
+
 
 
 
