@@ -483,6 +483,10 @@
         map.on('mouseleave', 'camera-layer', () => { map.getCanvas().style.cursor = ''; hoverPopup.remove(); });
 
         map.on('click', 'camera-layer', (e) => {
+            // 追加：これより下のレイヤー（砂箱など）にクリックを伝播させない
+    if (e.features.length > 0) {
+        e.originalEvent.cancelBubble = true; 
+    }
             const f = e.features[0];
             const { title, videoId } = f.properties;
             const coords = f.geometry.coordinates.slice();
@@ -600,6 +604,10 @@
     window.reportEmpty = function(id) { db.ref('reports/' + id).set({ time: Date.now(), timeLabel: new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}) }); const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove(); };
     window.markAsDone = function(id) { db.ref('reports/' + id).remove(); const popup = document.querySelector('.mapboxgl-popup'); if (popup) popup.remove(); };
     map.on('click', 'sunabako-click-area', (e) => {
+// 追加：もしクリックした場所にカメラレイヤーの要素も含まれていたら、砂箱は開かない
+    const featuresAtPoint = map.queryRenderedFeatures(e.point, { layers: ['camera-layer'] });
+    if (featuresAtPoint.length > 0) return;
+        
         const p = e.features[0].properties; if (p.id === undefined) return;
         const isGray = rawData[p.id].isGray; const cleanAddr = rawData[p.id]['住所'].replace('北海道札幌市', '');
         new mapboxgl.Popup({ maxWidth: '280px', focusAfterOpen: true, anchor: 'center' }).setLngLat(e.lngLat).setHTML(`
@@ -612,6 +620,7 @@
 </script>
 </body>
 </html>
+
 
 
 
